@@ -122,30 +122,6 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Credentials info */}
-        <div className="mt-6 bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-            Informasi Akses Sistem
-          </p>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="badge badge-blue">operator</span>
-              </div>
-              <code className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded">
-                operator123
-              </code>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="badge badge-purple">admin</span>
-              </div>
-              <code className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded">
-                admin123
-              </code>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
