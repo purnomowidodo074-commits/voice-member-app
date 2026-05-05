@@ -101,8 +101,15 @@ export default function ResultPage() {
     setDeletingId(id);
     setDeleteError(null);
     try {
-      const { error } = await supabase.from("voice_members").delete().eq("id", id);
+      const { data: deleted, error } = await supabase
+        .from("voice_members")
+        .delete()
+        .eq("id", id)
+        .select();
       if (error) throw error;
+      if (!deleted || deleted.length === 0) {
+        throw new Error("Hapus gagal — tambahkan policy DELETE di Supabase RLS.");
+      }
       setData((prev) => prev.filter((r) => r.id !== id));
     } catch (e: unknown) {
       setDeleteError(e instanceof Error ? e.message : "Gagal menghapus data");
