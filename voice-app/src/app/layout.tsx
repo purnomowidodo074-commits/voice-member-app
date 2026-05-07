@@ -31,10 +31,17 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <Navbar />
-          <main className="min-h-screen pt-16 bg-slate-50">
-            {children}
-          </main>
+          <div className="flex flex-col min-h-screen">
+            <Navbar />
+            <main className="flex-1 pt-16 bg-slate-50">
+              {children}
+            </main>
+            <footer className="bg-white border-t border-slate-200 py-4">
+              <p className="text-center text-sm text-slate-500">
+                © 2026 PT. Toyota Motor Manufacturing Indonesia — E-Form Aspirasi
+              </p>
+            </footer>
+          </div>
         </AuthProvider>
       </body>
     </html>

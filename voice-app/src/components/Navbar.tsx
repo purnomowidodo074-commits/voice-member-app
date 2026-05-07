@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { FileText, LayoutDashboard, Mic2, LogOut, ShieldCheck, Wrench } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
@@ -19,17 +20,28 @@ export default function Navbar() {
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Logo */}
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-600"
-          >
-            <Mic2 size={16} color="white" strokeWidth={2.5} />
-          </div>
-          <div>
-            <p className="font-bold text-slate-800 text-sm leading-none">Voice Member</p>
-            <p className="text-xs leading-none mt-0.5 text-slate-500">
-              e-Form Aspirasi
-            </p>
+        <div className="flex items-center gap-3">
+          {/* Company Logo */}
+          <Image
+            src="/logo-tmmin.png"
+            alt="PT. Toyota Motor Manufacturing Indonesia"
+            width={80}
+            height={36}
+            className="object-contain"
+          />
+
+          {/* Separator */}
+          <div className="w-px h-8 bg-slate-300" />
+
+          {/* App Logo */}
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-600">
+              <Mic2 size={16} color="white" strokeWidth={2.5} />
+            </div>
+            <div>
+              <p className="font-bold text-slate-800 text-sm leading-none">Voice Member</p>
+              <p className="text-xs leading-none mt-0.5 text-slate-500">e-Form Aspirasi</p>
+            </div>
           </div>
         </div>
 
