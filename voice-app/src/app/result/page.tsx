@@ -47,6 +47,8 @@ function formatDateTime(dtStr: string) {
 }
 
 function MemberBarChart({ data }: { data: VoiceMember[] }) {
+  const [profiles, setProfiles] = useState<Record<string, string | null>>({});
+
   const counts = useMemo(() => {
     const map = new Map<string, number>();
     for (const r of data) {
@@ -57,6 +59,23 @@ function MemberBarChart({ data }: { data: VoiceMember[] }) {
       .sort((a, b) => b.count - a.count);
   }, [data]);
 
+  useEffect(() => {
+    const names = counts.slice(0, 10).map((c) => c.name);
+    if (names.length === 0) return;
+    supabase
+      .from("member_accounts")
+      .select("nama, profile_photo")
+      .in("nama", names)
+      .then(({ data: rows }) => {
+        if (!rows) return;
+        const map: Record<string, string | null> = {};
+        for (const r of rows) {
+          map[r.nama] = r.profile_photo || null;
+        }
+        setProfiles(map);
+      });
+  }, [counts]);
+
   const maxCount = counts[0]?.count ?? 1;
 
   return (
@@ -66,11 +85,19 @@ function MemberBarChart({ data }: { data: VoiceMember[] }) {
         <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wider">Top Pengirim</h3>
         <span className="text-xs text-slate-400 ml-auto">{data.length} total aspirasi</span>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         {counts.slice(0, 10).map((item, i) => (
           <div key={item.name} className="flex items-center gap-3">
             <span className="w-5 text-xs font-bold text-slate-400 text-right shrink-0">{i + 1}</span>
-            <span className="text-sm font-medium text-slate-700 w-36 truncate shrink-0">{item.name}</span>
+            <div className="shrink-0 rounded-full overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-600"
+                 style={{ width: "28px", height: "28px", minWidth: "28px" }}>
+              {profiles[item.name] ? (
+                <img src={profiles[item.name]!} alt="" className="w-full h-full object-cover" />
+              ) : (
+                item.name.charAt(0).toUpperCase()
+              )}
+            </div>
+            <span className="text-sm font-medium text-slate-700 w-32 truncate shrink-0">{item.name}</span>
             <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden relative">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-purple-500 to-purple-600 transition-all"

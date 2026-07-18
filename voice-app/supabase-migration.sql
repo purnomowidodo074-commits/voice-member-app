@@ -36,6 +36,25 @@ INSERT INTO public.member_accounts (noreg, nama, password_hash, role)
 VALUES ('ADMIN', 'Administrator', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'admin')
 ON CONFLICT (noreg) DO NOTHING;
 
+-- 4. Tambah kolom profile_photo ke member_accounts (untuk foto profil peserta)
+ALTER TABLE public.member_accounts
+  ADD COLUMN IF NOT EXISTS profile_photo TEXT DEFAULT NULL;
+
+-- 5. Buat storage bucket profile-photos (public)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('profile-photos', 'profile-photos', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Policy: public read bucket profile-photos
+CREATE POLICY "Public read profile-photos"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'profile-photos');
+
+-- Policy: anon upload ke profile-photos
+CREATE POLICY "Allow anon upload profile-photos"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'profile-photos');
+
 -- ============================================================
 -- SELESAI. Verifikasi:
 -- SELECT * FROM member_accounts;

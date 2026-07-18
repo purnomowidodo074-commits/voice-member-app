@@ -11,6 +11,7 @@ export interface AuthUser {
   noreg: string;
   nama: string;
   role: UserRole;
+  profile_photo?: string | null;
 }
 
 interface ActivateResult {
@@ -29,6 +30,7 @@ interface AuthContextType {
   // Login dengan noreg + password
   login: (noreg: string, password: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
+  updateProfilePhoto: (url: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -38,6 +40,7 @@ const AuthContext = createContext<AuthContextType>({
   activate: async () => ({ success: false, message: "" }),
   login: async () => ({ success: false, message: "" }),
   logout: () => {},
+  updateProfilePhoto: () => {},
 });
 
 // SHA-256 hash menggunakan Web Crypto API (browser-native, no library needed)
@@ -163,7 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const { data, error } = await supabase
         .from("member_accounts")
-        .select("noreg, nama, role")
+        .select("noreg, nama, role, profile_photo")
         .eq("noreg", noreg.trim())
         .eq("password_hash", passwordHash)
         .single();
@@ -193,6 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         noreg: data.noreg,
         nama: data.nama,
         role: data.role as UserRole,
+        profile_photo: data.profile_photo || null,
       };
 
       setUser(authUser);
@@ -203,6 +207,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateProfilePhoto = (url: string) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, profile_photo: url };
+      localStorage.setItem("vm_auth_v2", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem("vm_auth_v2");
@@ -210,7 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, verifyNoreg, activate, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, verifyNoreg, activate, login, logout, updateProfilePhoto }}>
       {children}
     </AuthContext.Provider>
   );
