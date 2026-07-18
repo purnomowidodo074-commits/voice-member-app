@@ -5,11 +5,12 @@ import {
   RefreshCw,
   Search,
   ImageIcon,
-  FileSpreadsheet,
+  FileText,
   Inbox,
   ExternalLink,
 } from "lucide-react";
-import Papa from "papaparse";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { supabase } from "@/lib/supabase";
 import { VoiceMember, LINE_OPTIONS } from "@/lib/types";
 import Link from "next/link";
@@ -119,24 +120,33 @@ export default function ResultPage() {
     }
   };
 
-  // Export CSV
-  const exportCSV = () => {
-    const exportData = filtered.map((r) => ({
-      Tanggal: formatDate(r.input_date),
-      "Waktu Input": formatDateTime(r.created_at),
-      "Nama": r.member_name,
-      Line: r.line_name,
-      "Voice Member": r.voice_text,
-      "URL Foto": r.photo_url ?? "",
-    }));
-    const csv = Papa.unparse(exportData);
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `voice-member-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const exportPDF = () => {
+    const doc = new jsPDF("l", "mm", "a4");
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    doc.setFontSize(16);
+    doc.text("Laporan Voice Member", pageWidth / 2, 15, { align: "center" });
+    doc.setFontSize(9);
+    doc.text(`Tanggal Export: ${new Date().toLocaleDateString("id-ID")}`, pageWidth / 2, 22, { align: "center" });
+
+    const rows = filtered.map((r, i) => [
+      i + 1,
+      formatDate(r.input_date),
+      r.member_name,
+      r.line_name,
+      r.voice_text,
+    ]);
+
+    autoTable(doc, {
+      head: [["#", "Tanggal", "Nama", "Line", "Voice Member"]],
+      body: rows,
+      startY: 28,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [88, 28, 135], textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [245, 243, 255] },
+    });
+
+    doc.save(`voice-member-${new Date().toISOString().split("T")[0]}.pdf`);
   };
 
   return (
@@ -215,13 +225,13 @@ export default function ResultPage() {
               Refresh
             </button>
             <button
-              id="btn-export-csv"
-              onClick={exportCSV}
+              id="btn-export-pdf"
+              onClick={exportPDF}
               className="btn-success"
               disabled={filtered.length === 0}
             >
-              <FileSpreadsheet size={15} />
-              Export CSV
+              <FileText size={15} />
+              Export PDF
             </button>
           </div>
         </div>
@@ -428,7 +438,7 @@ export default function ResultPage() {
         </div>
 
         <p className="text-center mt-8 text-sm text-slate-500">
-          Data diurutkan berdasarkan waktu input terbaru · Export CSV tersedia
+          Data diurutkan berdasarkan waktu input terbaru · Export PDF tersedia
         </p>
       </div>
     </div>
