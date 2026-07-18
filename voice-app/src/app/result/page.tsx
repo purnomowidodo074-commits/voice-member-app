@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   RefreshCw,
   Search,
@@ -14,6 +14,7 @@ import autoTable from "jspdf-autotable";
 import { supabase } from "@/lib/supabase";
 import { VoiceMember, LINE_OPTIONS } from "@/lib/types";
 import Link from "next/link";
+import { useAuth } from "@/components/AuthProvider";
 
 const LINE_BADGE: Record<string, string> = {
   "Mel-Pour-Analys": "badge-blue",
@@ -45,7 +46,51 @@ function formatDateTime(dtStr: string) {
   });
 }
 
+function MemberBarChart({ data }: { data: VoiceMember[] }) {
+  const counts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const r of data) {
+      map.set(r.member_name, (map.get(r.member_name) ?? 0) + 1);
+    }
+    return Array.from(map.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [data]);
+
+  const maxCount = counts[0]?.count ?? 1;
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-6 py-5 mb-6">
+      <div className="flex items-center gap-2 mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></svg>
+        <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wider">Top Pengirim</h3>
+        <span className="text-xs text-slate-400 ml-auto">{data.length} total aspirasi</span>
+      </div>
+      <div className="space-y-2">
+        {counts.slice(0, 10).map((item, i) => (
+          <div key={item.name} className="flex items-center gap-3">
+            <span className="w-5 text-xs font-bold text-slate-400 text-right shrink-0">{i + 1}</span>
+            <span className="text-sm font-medium text-slate-700 w-36 truncate shrink-0">{item.name}</span>
+            <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden relative">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-purple-500 to-purple-600 transition-all"
+                style={{ width: `${(item.count / maxCount) * 100}%` }}
+              />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-600">
+                {item.count}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ResultPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
   const [data, setData] = useState<VoiceMember[]>([]);
   const [filtered, setFiltered] = useState<VoiceMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,13 +103,21 @@ export default function ResultPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
     setError(null);
     try {
-      const { data: rows, error: err } = await supabase
+      let query = supabase
         .from("voice_members")
         .select("*")
         .order("created_at", { ascending: false });
+
+      // Member hanya lihat data milik sendiri (filter by noreg)
+      if (!isAdmin) {
+        query = query.eq("noreg", user.noreg);
+      }
+
+      const { data: rows, error: err } = await query;
 
       if (err) throw err;
       setData(rows ?? []);
@@ -75,7 +128,7 @@ export default function ResultPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user, isAdmin]);
 
   useEffect(() => {
     fetchData();
@@ -203,13 +256,15 @@ export default function ResultPage() {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-3 bg-purple-50 text-purple-700 border border-purple-200 uppercase tracking-wider">
-              Dashboard Data
+              {isAdmin ? "Dashboard Data" : "Riwayat Saya"}
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-              Hasil Voice Member
+              {isAdmin ? "Hasil Voice Member" : "Aspirasi yang Saya Kirim"}
             </h1>
             <p className="text-slate-500 text-sm mt-1">
-              {filtered.length} entri ditampilkan dari {data.length} total
+              {isAdmin
+                ? `${filtered.length} entri ditampilkan dari ${data.length} total`
+                : `${data.length} aspirasi telah Anda kirimkan`}
             </p>
           </div>
 
@@ -236,7 +291,8 @@ export default function ResultPage() {
           </div>
         </div>
 
-        {/* Stats Row */}
+        {/* Stats Row — only admin */}
+        {isAdmin && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
           {LINE_OPTIONS.map((line) => {
             const count = data.filter((r) => r.line_name === line).length;
@@ -261,8 +317,15 @@ export default function ResultPage() {
             );
           })}
         </div>
+        )}
 
-        {/* Search & Filter Bar */}
+        {/* Top Member Chart — only admin */}
+        {isAdmin && data.length > 0 && (
+          <MemberBarChart data={data} />
+        )}
+
+        {/* Search & Filter Bar — only admin */}
+        {isAdmin && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-4 py-3 mb-6 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -295,6 +358,7 @@ export default function ResultPage() {
             </button>
           )}
         </div>
+        )}
 
         {/* Table */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">

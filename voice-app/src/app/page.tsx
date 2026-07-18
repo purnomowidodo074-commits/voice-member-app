@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { LINE_OPTIONS } from "@/lib/types";
+import { useAuth } from "@/components/AuthProvider";
 
 function getTodayDate() {
   return new Date().toISOString().split("T")[0];
@@ -22,11 +23,11 @@ function getTodayDate() {
 
 export default function FormPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     input_date: getTodayDate(),
-    member_name: "",
     line_name: "",
     voice_text: "",
   });
@@ -71,10 +72,13 @@ export default function FormPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.member_name.trim() || !form.line_name || !form.voice_text.trim()) {
+    if (!form.line_name || !form.voice_text.trim()) {
       showToast("error", "Harap lengkapi semua field yang wajib diisi.");
       return;
     }
+
+    const memberName = user?.nama ?? "";
+    const memberNoreg = user?.noreg ?? "";
 
     setIsSubmitting(true);
     try {
@@ -96,13 +100,14 @@ export default function FormPage() {
         photo_url = urlData.publicUrl;
       }
 
-      // Insert ke database
+      // Insert ke database (sertakan noreg untuk filter result)
       const { error: insertError } = await supabase
         .from("voice_members")
         .insert([
           {
             input_date: form.input_date,
-            member_name: form.member_name.trim(),
+            member_name: memberName,
+            noreg: memberNoreg,
             line_name: form.line_name,
             voice_text: form.voice_text.trim(),
             photo_url,
@@ -114,7 +119,6 @@ export default function FormPage() {
       showToast("success", "Aspirasi berhasil dikirim! Terima kasih.");
       setForm({
         input_date: getTodayDate(),
-        member_name: "",
         line_name: "",
         voice_text: "",
       });
@@ -199,23 +203,22 @@ export default function FormPage() {
                 />
               </div>
 
-              {/* Name */}
+              {/* Name — auto-fill dari akun login */}
               <div>
                 <label className="form-label" htmlFor="member_name">
                   <span className="flex items-center gap-1.5">
                     <User size={14} />
-                    Nama <span className="text-red-500">*</span>
+                    Nama
                   </span>
                 </label>
                 <input
                   id="member_name"
                   type="text"
                   name="member_name"
-                  value={form.member_name}
-                  onChange={handleChange}
-                  placeholder="Masukkan nama lengkap"
-                  required
-                  className="form-input"
+                  value={user?.nama ?? ""}
+                  readOnly
+                  className="form-input bg-slate-50 text-slate-700 cursor-default select-none"
+                  title="Nama diambil dari akun Anda"
                 />
               </div>
             </div>

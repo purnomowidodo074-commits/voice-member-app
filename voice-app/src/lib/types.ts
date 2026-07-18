@@ -3,6 +3,7 @@ export interface VoiceMember {
   created_at: string;
   input_date: string;
   member_name: string;
+  noreg: string;
   line_name: string;
   voice_text: string;
   photo_url: string | null;
