@@ -27,7 +27,7 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "ACHMAD FAHRUL",
-    "noreg": "212857"
+    "noreg": "0212857"
   },
   {
     "nama": "ADE CAHYONO SAPUTRA",
@@ -79,7 +79,7 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "ALDINO FELANI",
-    "noreg": "213358"
+    "noreg": "0213358"
   },
   {
     "nama": "ALFI SUPRIATNA",
@@ -87,7 +87,7 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "ALIP SAPARDI",
-    "noreg": "313877"
+    "noreg": "0313877"
   },
   {
     "nama": "AMIRUDDIN",
@@ -95,7 +95,7 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "ANDI BUDIMAN",
-    "noreg": "213180"
+    "noreg": "0213180"
   },
   {
     "nama": "ANGKAY WIJAYA",
@@ -103,15 +103,15 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "ANTONIUS ERWIN MURTIJO",
-    "noreg": "313410"
+    "noreg": "0313410"
   },
   {
     "nama": "ARIS WIDODO",
-    "noreg": "313391"
+    "noreg": "0313391"
   },
   {
     "nama": "ARZUNADI",
-    "noreg": "313685"
+    "noreg": "0313685"
   },
   {
     "nama": "ASEP SAHID",
@@ -119,11 +119,11 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "BERNADIKTUS Y.H",
-    "noreg": "10174"
+    "noreg": "0010174"
   },
   {
     "nama": "BUDIMAN",
-    "noreg": "213269"
+    "noreg": "0213269"
   },
   {
     "nama": "CHOIRUN NI'AM",
@@ -143,7 +143,7 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "DEVY ASTARI",
-    "noreg": "213184"
+    "noreg": "0213184"
   },
   {
     "nama": "DIMAN ARDIANSYAH",
@@ -155,7 +155,7 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "DOYO NUHONI PRASETYO",
-    "noreg": "213185"
+    "noreg": "0213185"
   },
   {
     "nama": "DWI RIZKY HILDANI",
@@ -207,11 +207,11 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "HARI KARTONO",
-    "noreg": "414304"
+    "noreg": "0414304"
   },
   {
     "nama": "HENI WIYATNO",
-    "noreg": "919594"
+    "noreg": "0919594"
   },
   {
     "nama": "IBTIDAM MUFADILAH",
@@ -227,11 +227,11 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "JAELANI",
-    "noreg": "919766"
+    "noreg": "0919766"
   },
   {
     "nama": "JOKO KISTANTO",
-    "noreg": "516457"
+    "noreg": "0516457"
   },
   {
     "nama": "KOEWATNO",
@@ -263,7 +263,7 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "MUHAMMAD DIAN",
-    "noreg": "414307"
+    "noreg": "0414307"
   },
   {
     "nama": "MUHAMMAD FAJAR RAMDHANI",
@@ -307,11 +307,11 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "NOFRIZAL",
-    "noreg": "313646"
+    "noreg": "0313646"
   },
   {
     "nama": "PONCO WINOTO",
-    "noreg": "313472"
+    "noreg": "0313472"
   },
   {
     "nama": "PRADIKA DWI ANGGORO",
@@ -327,7 +327,7 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "RACHMAT KURNIAWAN",
-    "noreg": "213290"
+    "noreg": "0213290"
   },
   {
     "nama": "RAFLI NUH ROHMAN",
@@ -343,7 +343,7 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "RICO PEBRIYANTO",
-    "noreg": "919738"
+    "noreg": "0919738"
   },
   {
     "nama": "RIDWAN FADLI",
@@ -407,7 +407,7 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "SIAGA SULISTYO",
-    "noreg": "112571"
+    "noreg": "0112571"
   },
   {
     "nama": "SIGIT WIDYO NUGROHO",
@@ -415,7 +415,7 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "SISWO PRIYONO",
-    "noreg": "313409"
+    "noreg": "0313409"
   },
   {
     "nama": "SLAMET BUDI SISWANTO",
@@ -431,15 +431,15 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "SRI WANTORO",
-    "noreg": "212859"
+    "noreg": "0212859"
   },
   {
     "nama": "SUDIONO",
-    "noreg": "313847"
+    "noreg": "0313847"
   },
   {
     "nama": "SUKAMTO",
-    "noreg": "313401"
+    "noreg": "0313401"
   },
   {
     "nama": "SUKIYO",
@@ -447,7 +447,7 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "SULISDIYANTO",
-    "noreg": "313406"
+    "noreg": "0313406"
   },
   {
     "nama": "SUPRIYANTO",
@@ -455,7 +455,7 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "SURYO HADI WIHARJO",
-    "noreg": "414554"
+    "noreg": "0414554"
   },
   {
     "nama": "SUTARTO",
@@ -463,7 +463,7 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "SUWANTO",
-    "noreg": "313799"
+    "noreg": "0313799"
   },
   {
     "nama": "SYAHID JUNI SETIAWAN",
@@ -475,7 +475,7 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "TAUFIQ ANDAYANI",
-    "noreg": "313394"
+    "noreg": "0313394"
   },
   {
     "nama": "TEGAR PRAYOGA",
@@ -519,7 +519,7 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "WIDODO PURNOMO",
-    "noreg": "313402"
+    "noreg": "0313402"
   },
   {
     "nama": "WITON",
@@ -547,11 +547,11 @@ export const MEMBERS: Member[] = [
   },
   {
     "nama": "YUSUP HIDAYAT",
-    "noreg": "212699"
+    "noreg": "0212699"
   },
   {
     "nama": "YUSUP ISWANTO",
-    "noreg": "818754"
+    "noreg": "0818754"
   },
   {
     "nama": "ZAENAL ARIFIN",
