@@ -8,6 +8,8 @@ import {
   FileText,
   Inbox,
   ExternalLink,
+  RotateCcw,
+  AlertTriangle,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -46,18 +48,32 @@ function formatDateTime(dtStr: string) {
   });
 }
 
-function MemberBarChart({ data }: { data: VoiceMember[] }) {
+function MemberBarChart({
+  data,
+  resetAt,
+  onResetRanking,
+}: {
+  data: VoiceMember[];
+  resetAt?: string | null;
+  onResetRanking?: () => Promise<void>;
+}) {
   const [profiles, setProfiles] = useState<Record<string, string | null>>({});
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   const counts = useMemo(() => {
+    const periodData = resetAt
+      ? data.filter((r) => new Date(r.created_at) >= new Date(resetAt))
+      : data;
     const map = new Map<string, number>();
-    for (const r of data) {
+    for (const r of periodData) {
       map.set(r.member_name, (map.get(r.member_name) ?? 0) + 1);
     }
     return Array.from(map.entries())
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
-  }, [data]);
+  }, [data, resetAt]);
 
   useEffect(() => {
     const names = counts.slice(0, 10).map((c) => c.name);
@@ -77,39 +93,126 @@ function MemberBarChart({ data }: { data: VoiceMember[] }) {
   }, [counts]);
 
   const maxCount = counts[0]?.count ?? 1;
+  const periodTotal = counts.reduce((sum, c) => sum + c.count, 0);
+
+  const handleConfirmReset = async () => {
+    if (!onResetRanking) return;
+    setResetting(true);
+    setResetError(null);
+    try {
+      await onResetRanking();
+      setConfirmReset(false);
+    } catch (e: unknown) {
+      setResetError(e instanceof Error ? e.message : "Gagal mereset ranking. Coba lagi.");
+    } finally {
+      setResetting(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-6 py-5 mb-6">
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></svg>
         <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wider">Top Pengirim</h3>
-        <span className="text-xs text-slate-400 ml-auto">{data.length} total aspirasi</span>
+        <span className="text-xs text-slate-400 ml-auto">
+          {resetAt
+            ? `${periodTotal} aspirasi sejak ${formatDate(resetAt)}`
+            : `${data.length} total aspirasi`}
+        </span>
+        {onResetRanking && (
+          <button
+            onClick={() => setConfirmReset(true)}
+            className="btn-secondary text-xs py-1.5 px-3"
+            title="Kosongkan ranking tanpa menghapus data"
+          >
+            <RotateCcw size={13} />
+            Reset Ranking
+          </button>
+        )}
       </div>
-      <div className="space-y-2.5">
-        {counts.slice(0, 10).map((item, i) => (
-          <div key={item.name} className="flex items-center gap-3">
-            <span className="w-5 text-xs font-bold text-slate-400 text-right shrink-0">{i + 1}</span>
-            <div className="shrink-0 rounded-full overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-600"
-                 style={{ width: "28px", height: "28px", minWidth: "28px" }}>
-              {profiles[item.name] ? (
-                <img src={profiles[item.name]!} alt="" className="w-full h-full object-cover" />
-              ) : (
-                item.name.charAt(0).toUpperCase()
-              )}
+
+      {counts.length === 0 ? (
+        <p className="text-sm text-slate-400 py-6 text-center">
+          Belum ada aspirasi pada periode ranking ini. Data lama tetap tersimpan di tabel.
+        </p>
+      ) : (
+        <div className="space-y-2.5">
+          {counts.slice(0, 10).map((item, i) => (
+            <div key={item.name} className="flex items-center gap-3">
+              <span className="w-5 text-xs font-bold text-slate-400 text-right shrink-0">{i + 1}</span>
+              <div className="shrink-0 rounded-full overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-600"
+                   style={{ width: "28px", height: "28px", minWidth: "28px" }}>
+                {profiles[item.name] ? (
+                  <img src={profiles[item.name]!} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  item.name.charAt(0).toUpperCase()
+                )}
+              </div>
+              <span className="text-sm font-medium text-slate-700 w-32 truncate shrink-0">{item.name}</span>
+              <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden relative">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-purple-500 to-purple-600 transition-all"
+                  style={{ width: `${(item.count / maxCount) * 100}%` }}
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-600">
+                  {item.count}
+                </span>
+              </div>
             </div>
-            <span className="text-sm font-medium text-slate-700 w-32 truncate shrink-0">{item.name}</span>
-            <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden relative">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-purple-500 to-purple-600 transition-all"
-                style={{ width: `${(item.count / maxCount) * 100}%` }}
-              />
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-600">
-                {item.count}
-              </span>
+          ))}
+        </div>
+      )}
+
+      {confirmReset && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+          onClick={() => setConfirmReset(false)}
+        >
+          <div
+            className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-100 text-amber-600 shrink-0">
+                <AlertTriangle size={20} />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">Reset Ranking Top Pengirim?</h3>
+            </div>
+            <p className="text-sm text-slate-600 leading-relaxed mb-2">
+              Ranking Top Pengirim akan dikosongkan dan mulai dihitung dari nol.
+            </p>
+            <p className="text-sm text-slate-600 leading-relaxed mb-6">
+              Data aspirasi yang sudah dikirim <span className="font-semibold text-slate-800">tidak akan dihapus</span> — seluruh data tetap utuh, hanya ranking yang direset.
+            </p>
+            {resetError && (
+              <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700 font-medium">
+                {resetError}
+              </div>
+            )}
+            <div className="flex justify-end gap-3">
+              <button
+                className="btn-secondary text-sm"
+                onClick={() => setConfirmReset(false)}
+                disabled={resetting}
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleConfirmReset}
+                disabled={resetting}
+                className="inline-flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-medium px-4 py-2 rounded-lg border border-transparent transition-all disabled:opacity-60"
+              >
+                {resetting ? (
+                  <span className="spinner" style={{ width: "14px", height: "14px", borderWidth: "2px" }} />
+                ) : (
+                  <RotateCcw size={15} />
+                )}
+                Ya, Reset Ranking
+              </button>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -128,6 +231,7 @@ export default function ResultPage() {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [rankingResetAt, setRankingResetAt] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -149,6 +253,19 @@ export default function ResultPage() {
       if (err) throw err;
       setData(rows ?? []);
       setFiltered(rows ?? []);
+
+      try {
+        const { data: settingRow, error: settingErr } = await supabase
+          .from("app_settings")
+          .select("value")
+          .eq("key", "top_sender_reset_at")
+          .maybeSingle();
+        if (!settingErr) {
+          setRankingResetAt(settingRow?.value ?? null);
+        }
+      } catch {
+        setRankingResetAt(null);
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Gagal memuat data";
       setError(msg);
@@ -198,6 +315,18 @@ export default function ResultPage() {
       setDeletingId(null);
       setConfirmId(null);
     }
+  };
+
+  const resetRanking = async () => {
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from("app_settings")
+      .upsert(
+        { key: "top_sender_reset_at", value: now, updated_at: now },
+        { onConflict: "key" }
+      );
+    if (error) throw error;
+    setRankingResetAt(now);
   };
 
   const exportPDF = () => {
@@ -348,7 +477,11 @@ export default function ResultPage() {
 
         {/* Top Member Chart — only admin */}
         {isAdmin && data.length > 0 && (
-          <MemberBarChart data={data} />
+          <MemberBarChart
+            data={data}
+            resetAt={rankingResetAt}
+            onResetRanking={resetRanking}
+          />
         )}
 
         {/* Search & Filter Bar — only admin */}

@@ -16,10 +16,12 @@ CREATE TABLE IF NOT EXISTS public.member_accounts (
 ALTER TABLE public.member_accounts ENABLE ROW LEVEL SECURITY;
 
 -- Policy: anon bisa SELECT (untuk verifikasi login) dan INSERT (untuk aktivasi)
+DROP POLICY IF EXISTS "Allow anon read member_accounts" ON public.member_accounts;
 CREATE POLICY "Allow anon read member_accounts"
   ON public.member_accounts FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Allow anon insert member_accounts" ON public.member_accounts;
 CREATE POLICY "Allow anon insert member_accounts"
   ON public.member_accounts FOR INSERT
   WITH CHECK (true);
@@ -46,17 +48,51 @@ VALUES ('profile-photos', 'profile-photos', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- Policy: public read bucket profile-photos
+DROP POLICY IF EXISTS "Public read profile-photos" ON storage.objects;
 CREATE POLICY "Public read profile-photos"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'profile-photos');
 
 -- Policy: anon upload ke profile-photos
+DROP POLICY IF EXISTS "Allow anon upload profile-photos" ON storage.objects;
 CREATE POLICY "Allow anon upload profile-photos"
   ON storage.objects FOR INSERT
   WITH CHECK (bucket_id = 'profile-photos');
 
 -- ============================================================
+-- 6. Tabel app_settings: untuk reset ranking Top Pengirim
+-- Menyimpan timestamp kapan ranking terakhir direset.
+-- Data voice_members TIDAK dihapus — hanya titik awal penghitungan ranking.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.app_settings (
+  key        TEXT PRIMARY KEY,
+  value      TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
+
+-- Policy: anon bisa baca/tulis (sama seperti tabel lain di app ini)
+DROP POLICY IF EXISTS "Allow anon read app_settings" ON public.app_settings;
+CREATE POLICY "Allow anon read app_settings"
+  ON public.app_settings FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS "Allow anon insert app_settings" ON public.app_settings;
+CREATE POLICY "Allow anon insert app_settings"
+  ON public.app_settings FOR INSERT
+  WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow anon update app_settings" ON public.app_settings;
+CREATE POLICY "Allow anon update app_settings"
+  ON public.app_settings FOR UPDATE
+  USING (true)
+  WITH CHECK (true);
+
+-- ============================================================
 -- SELESAI. Verifikasi:
 -- SELECT * FROM member_accounts;
 -- SELECT column_name FROM information_schema.columns WHERE table_name = 'voice_members';
+-- SELECT * FROM app_settings;
 -- ============================================================
