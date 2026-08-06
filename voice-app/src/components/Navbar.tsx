@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { FileText, LayoutDashboard, Mic2, LogOut, Camera, X } from "lucide-react";
+import { FileText, LayoutDashboard, Mic2, LogOut, Camera, X, UserCheck } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import { useState, useRef } from "react";
@@ -111,6 +111,21 @@ export default function Navbar() {
             <LayoutDashboard size={15} />
             {isAdmin ? "Semua Result" : "Result Saya"}
           </Link>
+
+          {isAdmin && (
+            <Link
+              href="/members"
+              id="nav-members"
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                pathname === "/members"
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              }`}
+            >
+              <UserCheck size={15} />
+              Aktivasi
+            </Link>
+          )}
         </div>
 
         {/* User Info + Logout */}

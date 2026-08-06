@@ -54,7 +54,7 @@ async function hashPassword(password: string): Promise<string> {
 // Routes yang bisa diakses per role
 const ROLE_ROUTES: Record<UserRole, string[]> = {
   member: ["/", "/result"],
-  admin: ["/", "/result"],
+  admin: ["/", "/result", "/members"],
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
