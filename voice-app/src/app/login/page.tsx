@@ -94,6 +94,14 @@ export default function LoginPage() {
     e.preventDefault();
     setAktiError("");
 
+    if (isNewMember && !/^\d{7}$/.test(aktiNoreg.trim())) {
+      setAktiError("Noreg harus berupa 7 digit angka.");
+      return;
+    }
+    if (isNewMember && !aktiNama.trim()) {
+      setAktiError("Nama wajib diisi.");
+      return;
+    }
     if (aktiPassword.length < 6) {
       setAktiError("Password minimal 6 karakter.");
       return;
@@ -104,7 +112,9 @@ export default function LoginPage() {
     }
 
     setIsAktiLoading(true);
-    const result = await activate(aktiNoreg.trim(), aktiNama, aktiPassword);
+    const result = isNewMember
+      ? await registerNew(aktiNoreg.trim(), aktiNama, aktiPassword)
+      : await activate(aktiNoreg.trim(), aktiNama, aktiPassword);
 
     if (!result.success) {
       setAktiError(result.message);
@@ -118,6 +128,7 @@ export default function LoginPage() {
         setAktiPassword("");
         setAktiPasswordConfirm("");
         setAktiSuccess("");
+        setIsNewMember(false);
         setActiveTab("login");
         setLoginNoreg(aktiNoreg.trim());
       }, 2000);
@@ -142,6 +153,7 @@ export default function LoginPage() {
     setAktiPassword("");
     setAktiPasswordConfirm("");
     setAktiError("");
+    setIsNewMember(false);
   };
 
   // ============================================================
@@ -305,7 +317,7 @@ export default function LoginPage() {
                     2
                   </div>
                   <span className="text-xs text-slate-500 ml-1">
-                    {aktiStep === 1 ? "Verifikasi Noreg" : "Buat Password"}
+                    {aktiStep === 1 ? "Verifikasi Noreg" : isNewMember ? "Lengkapi Data" : "Buat Password"}
                   </span>
                 </div>
 
@@ -384,15 +396,63 @@ export default function LoginPage() {
                 {/* Step 2: Buat Password */}
                 {aktiStep === 2 && (
                   <form onSubmit={handleActivate} className="space-y-5">
-                    {/* Info nama */}
-                    <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-50 border border-blue-200">
-                      <UserCheck size={18} className="text-blue-600 shrink-0" />
-                      <div>
-                        <p className="text-xs text-blue-600 font-medium">Anggota terverifikasi</p>
-                        <p className="text-sm font-bold text-blue-900">{aktiNama}</p>
-                        <p className="text-xs text-blue-600">Noreg: {aktiNoreg}</p>
+                    {isNewMember ? (
+                      <>
+                        <div className="flex items-start gap-2.5 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200">
+                          <Info size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                          <p className="text-amber-800 text-xs">
+                            Data Anda akan disimpan sebagai member baru (di luar daftar resmi).
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="form-label" htmlFor="akti-noreg-new">
+                            <span className="flex items-center gap-1.5">
+                              <Hash size={14} />
+                              Nomor Registrasi (Noreg)
+                            </span>
+                          </label>
+                          <input
+                            id="akti-noreg-new"
+                            type="text"
+                            value={aktiNoreg}
+                            onChange={(e) => setAktiNoreg(e.target.value)}
+                            placeholder="7 digit angka"
+                            required
+                            pattern="\d{7}"
+                            title="Noreg harus 7 digit angka"
+                            className="form-input"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="form-label" htmlFor="akti-nama-new">
+                            <span className="flex items-center gap-1.5">
+                              <UserCheck size={14} />
+                              Nama Lengkap
+                            </span>
+                          </label>
+                          <input
+                            id="akti-nama-new"
+                            type="text"
+                            value={aktiNama}
+                            onChange={(e) => setAktiNama(e.target.value)}
+                            placeholder="Nama lengkap Anda"
+                            required
+                            className="form-input"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-50 border border-blue-200">
+                        <UserCheck size={18} className="text-blue-600 shrink-0" />
+                        <div>
+                          <p className="text-xs text-blue-600 font-medium">Anggota terverifikasi</p>
+                          <p className="text-sm font-bold text-blue-900">{aktiNama}</p>
+                          <p className="text-xs text-blue-600">Noreg: {aktiNoreg}</p>
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     <div>
                       <label className="form-label" htmlFor="akti-password">

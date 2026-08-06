@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { RefreshCw, Search, UserCheck, UserX, Users } from "lucide-react";
+import { RefreshCw, Search, UserCheck, UserX, UserPlus, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { MEMBERS } from "@/lib/members";
 import { useAuth } from "@/components/AuthProvider";
@@ -11,6 +11,7 @@ interface ActivatedAccount {
   nama: string;
   role: string;
   created_at: string;
+  is_self_registered: boolean;
 }
 
 function formatDateTime(dtStr: string) {
@@ -32,7 +33,7 @@ export default function MembersPage() {
   const [accounts, setAccounts] = useState<ActivatedAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<"belum" | "sudah">("belum");
+  const [tab, setTab] = useState<"belum" | "sudah" | "baru">("belum");
   const [search, setSearch] = useState("");
 
   const fetchData = useCallback(async () => {
@@ -41,7 +42,7 @@ export default function MembersPage() {
     try {
       const { data, error: err } = await supabase
         .from("member_accounts")
-        .select("noreg, nama, role, created_at")
+        .select("noreg, nama, role, created_at, is_self_registered")
         .order("created_at", { ascending: false });
 
       if (err) throw err;
@@ -63,7 +64,7 @@ export default function MembersPage() {
   );
 
   const sudahAktivasi = useMemo(
-    () => accounts.filter((a) => a.role === "member"),
+    () => accounts.filter((a) => a.role === "member" && !a.is_self_registered),
     [accounts]
   );
 
@@ -87,6 +88,19 @@ export default function MembersPage() {
       (a) => a.nama.toLowerCase().includes(q) || a.noreg.includes(q)
     );
   }, [sudahAktivasi, search]);
+
+  const memberBaru = useMemo(
+    () => accounts.filter((a) => a.is_self_registered),
+    [accounts]
+  );
+
+  const filteredBaru = useMemo(() => {
+    if (!search.trim()) return memberBaru;
+    const q = search.toLowerCase();
+    return memberBaru.filter(
+      (a) => a.nama.toLowerCase().includes(q) || a.noreg.includes(q)
+    );
+  }, [memberBaru, search]);
 
   if (!isAdmin) {
     return (
@@ -125,7 +139,7 @@ export default function MembersPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-6">
           <div className="p-4 rounded-xl border bg-white border-slate-200">
             <div className="flex items-center gap-2 text-slate-500">
               <Users size={15} />
@@ -163,6 +177,22 @@ export default function MembersPage() {
             </div>
             <p className={`text-2xl font-bold mt-1 ${tab === "belum" ? "text-amber-900" : "text-slate-800"}`}>
               {belumAktivasi.length}
+            </p>
+          </button>
+          <button
+            onClick={() => setTab("baru")}
+            className={`p-4 text-left rounded-xl border transition-all ${
+              tab === "baru"
+                ? "bg-blue-50 border-blue-300 ring-2 ring-blue-500/20"
+                : "bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm"
+            }`}
+          >
+            <div className={`flex items-center gap-2 ${tab === "baru" ? "text-blue-700" : "text-slate-500"}`}>
+              <UserPlus size={15} />
+              <p className="text-xs font-semibold uppercase tracking-wider">Member Baru (Mandiri)</p>
+            </div>
+            <p className={`text-2xl font-bold mt-1 ${tab === "baru" ? "text-blue-900" : "text-slate-800"}`}>
+              {memberBaru.length}
             </p>
           </button>
         </div>
@@ -220,6 +250,38 @@ export default function MembersPage() {
                         <td className="font-semibold text-slate-800">{m.nama}</td>
                         <td>
                           <span className="badge badge-amber">Belum Aktivasi</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          ) : tab === "baru" ? (
+            filteredBaru.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-3">
+                <UserPlus size={40} className="text-slate-300" />
+                <p className="text-slate-700 font-semibold text-lg">Belum ada member yang daftar mandiri</p>
+              </div>
+            ) : (
+              <div className="table-container border-none">
+                <table className="data-table w-full">
+                  <thead>
+                    <tr>
+                      <th className="w-12 text-center">#</th>
+                      <th>Noreg</th>
+                      <th>Nama</th>
+                      <th>Waktu Daftar</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredBaru.map((a, idx) => (
+                      <tr key={a.noreg}>
+                        <td className="text-center font-medium text-slate-500">{idx + 1}</td>
+                        <td className="font-mono text-sm text-slate-600">{a.noreg}</td>
+                        <td className="font-semibold text-slate-800">{a.nama}</td>
+                        <td className="whitespace-nowrap text-slate-500 text-xs">
+                          {formatDateTime(a.created_at)}
                         </td>
                       </tr>
                     ))}
