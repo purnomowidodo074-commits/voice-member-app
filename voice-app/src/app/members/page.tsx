@@ -59,7 +59,7 @@ export default function MembersPage() {
   }, [fetchData]);
 
   const activatedNoregs = useMemo(
-    () => new Set(accounts.filter((a) => a.role === "member" && !a.is_self_registered).map((a) => a.noreg)),
+    () => new Set(accounts.filter((a) => a.role === "member").map((a) => a.noreg)),
     [accounts]
   );
 

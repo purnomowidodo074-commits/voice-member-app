@@ -174,6 +174,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!/^\d{7}$/.test(trimmedNoreg)) {
       return { success: false, message: "Noreg harus berupa 7 digit angka." };
     }
+    if (getMemberByNoreg(trimmedNoreg)) {
+      return { success: false, message: "Noreg ini terdaftar di daftar karyawan. Silakan gunakan aktivasi biasa." };
+    }
     if (!trimmedNama) {
       return { success: false, message: "Nama wajib diisi." };
     }
