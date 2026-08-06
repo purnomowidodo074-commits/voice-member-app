@@ -24,9 +24,11 @@ interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
   // Verifikasi noreg di Excel sebelum aktivasi (Step 1)
-  verifyNoreg: (noreg: string) => Promise<{ valid: boolean; nama?: string; message: string }>;
+  verifyNoreg: (noreg: string) => Promise<{ valid: boolean; nama?: string; notInRoster?: boolean; message: string }>;
   // Simpan akun baru ke Supabase (Step 2)
   activate: (noreg: string, nama: string, password: string) => Promise<ActivateResult>;
+  // Daftar mandiri untuk noreg yang tidak ada di daftar Excel
+  registerNew: (noreg: string, nama: string, password: string) => Promise<ActivateResult>;
   // Login dengan noreg + password
   login: (noreg: string, password: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
@@ -38,6 +40,7 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   verifyNoreg: async () => ({ valid: false, message: "" }),
   activate: async () => ({ success: false, message: "" }),
+  registerNew: async () => ({ success: false, message: "" }),
   login: async () => ({ success: false, message: "" }),
   logout: () => {},
   updateProfilePhoto: () => {},
@@ -103,13 +106,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, isLoading, pathname, router]);
 
   // Step 1: Verifikasi Noreg (cek Excel + cek belum aktivasi)
-  const verifyNoreg = async (noreg: string): Promise<{ valid: boolean; nama?: string; message: string }> => {
+  const verifyNoreg = async (noreg: string): Promise<{ valid: boolean; nama?: string; notInRoster?: boolean; message: string }> => {
     const trimmed = noreg.trim();
 
     // Cek apakah noreg ada di data Excel
     const member = getMemberByNoreg(trimmed);
     if (!member) {
-      return { valid: false, message: "Noreg tidak ditemukan. Pastikan nomor registrasi Anda benar." };
+      return {
+        valid: false,
+        notInRoster: true,
+        message: "Noreg tidak ditemukan di daftar karyawan terdaftar. Jika Anda member baru, silakan daftar mandiri.",
+      };
     }
 
     // Cek apakah sudah pernah aktivasi (ada di Supabase)
