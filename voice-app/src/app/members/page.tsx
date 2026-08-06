@@ -257,6 +257,38 @@ export default function MembersPage() {
                 </table>
               </div>
             )
+          ) : tab === "baru" ? (
+            filteredBaru.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-3">
+                <UserPlus size={40} className="text-slate-300" />
+                <p className="text-slate-700 font-semibold text-lg">Belum ada member yang daftar mandiri</p>
+              </div>
+            ) : (
+              <div className="table-container border-none">
+                <table className="data-table w-full">
+                  <thead>
+                    <tr>
+                      <th className="w-12 text-center">#</th>
+                      <th>Noreg</th>
+                      <th>Nama</th>
+                      <th>Waktu Daftar</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredBaru.map((a, idx) => (
+                      <tr key={a.noreg}>
+                        <td className="text-center font-medium text-slate-500">{idx + 1}</td>
+                        <td className="font-mono text-sm text-slate-600">{a.noreg}</td>
+                        <td className="font-semibold text-slate-800">{a.nama}</td>
+                        <td className="whitespace-nowrap text-slate-500 text-xs">
+                          {formatDateTime(a.created_at)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
           ) : filteredSudah.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <UserX size={40} className="text-slate-300" />
