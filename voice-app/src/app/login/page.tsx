@@ -11,16 +11,18 @@ import {
   AlertCircle,
   CheckCircle2,
   UserCheck,
+  UserPlus,
   ArrowRight,
   ArrowLeft,
   ShieldCheck,
+  Info,
 } from "lucide-react";
 
 type Tab = "login" | "aktivasi";
 type AktivasiStep = 1 | 2;
 
 export default function LoginPage() {
-  const { login, verifyNoreg, activate } = useAuth();
+  const { login, verifyNoreg, activate, registerNew } = useAuth();
 
   // --- Tab state ---
   const [activeTab, setActiveTab] = useState<Tab>("login");
@@ -34,6 +36,8 @@ export default function LoginPage() {
 
   // --- Aktivasi state ---
   const [aktiStep, setAktiStep] = useState<AktivasiStep>(1);
+  const [isNewMember, setIsNewMember] = useState(false);
+  const [aktiNotInRoster, setAktiNotInRoster] = useState(false);
   const [aktiNoreg, setAktiNoreg] = useState("");
   const [aktiNama, setAktiNama] = useState("");
   const [aktiPassword, setAktiPassword] = useState("");
@@ -63,16 +67,27 @@ export default function LoginPage() {
   const handleVerifyNoreg = async (e: FormEvent) => {
     e.preventDefault();
     setAktiError("");
+    setAktiNotInRoster(false);
     setIsAktiLoading(true);
 
     const result = await verifyNoreg(aktiNoreg.trim());
     if (!result.valid) {
       setAktiError(result.message);
+      setAktiNotInRoster(result.notInRoster ?? false);
     } else {
       setAktiNama(result.nama ?? "");
+      setIsNewMember(false);
       setAktiStep(2);
     }
     setIsAktiLoading(false);
+  };
+
+  const handleStartNewMemberRegistration = () => {
+    setIsNewMember(true);
+    setAktiNama("");
+    setAktiError("");
+    setAktiNotInRoster(false);
+    setAktiStep(2);
   };
 
   const handleActivate = async (e: FormEvent) => {
@@ -115,8 +130,10 @@ export default function LoginPage() {
     setLoginError("");
     setAktiError("");
     setAktiSuccess("");
+    setAktiNotInRoster(false);
     if (tab === "aktivasi") {
       setAktiStep(1);
+      setIsNewMember(false);
     }
   };
 
@@ -329,6 +346,18 @@ export default function LoginPage() {
                         <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
                         <p className="text-red-700 text-sm font-medium">{aktiError}</p>
                       </div>
+                    )}
+
+                    {aktiNotInRoster && (
+                      <button
+                        type="button"
+                        id="btn-register-new-member"
+                        onClick={handleStartNewMemberRegistration}
+                        className="btn-secondary w-full py-2.5"
+                      >
+                        <UserPlus size={16} />
+                        Daftar sebagai Anggota Baru
+                      </button>
                     )}
 
                     <button
