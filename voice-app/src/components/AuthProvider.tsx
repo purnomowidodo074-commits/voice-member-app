@@ -166,6 +166,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Daftar mandiri — untuk noreg yang tidak ada di daftar Excel
+  const registerNew = async (noreg: string, nama: string, password: string): Promise<ActivateResult> => {
+    const trimmedNoreg = noreg.trim();
+    const trimmedNama = nama.trim();
+
+    if (!/^\d{7}$/.test(trimmedNoreg)) {
+      return { success: false, message: "Noreg harus berupa 7 digit angka." };
+    }
+    if (!trimmedNama) {
+      return { success: false, message: "Nama wajib diisi." };
+    }
+
+    try {
+      const passwordHash = await hashPassword(password);
+      const namaFinal = trimmedNama.toUpperCase();
+
+      const { error } = await supabase.from("member_accounts").insert([
+        {
+          noreg: trimmedNoreg,
+          nama: namaFinal,
+          password_hash: passwordHash,
+          role: "member",
+          is_self_registered: true,
+        },
+      ]);
+
+      if (error) {
+        if (error.code === "23505") {
+          // unique violation
+          return { success: false, message: "Noreg sudah terdaftar. Silakan login." };
+        }
+        return { success: false, message: `Pendaftaran gagal: ${error.message}` };
+      }
+
+      return { success: true, message: "Akun berhasil didaftarkan! Silakan login.", nama: namaFinal };
+    } catch {
+      return { success: false, message: "Terjadi kesalahan. Coba lagi." };
+    }
+  };
+
   // Login dengan noreg + password
   const login = async (noreg: string, password: string): Promise<{ success: boolean; message: string }> => {
     try {
@@ -230,7 +270,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, verifyNoreg, activate, login, logout, updateProfilePhoto }}>
+    <AuthContext.Provider value={{ user, isLoading, verifyNoreg, activate, registerNew, login, logout, updateProfilePhoto }}>
       {children}
     </AuthContext.Provider>
   );
