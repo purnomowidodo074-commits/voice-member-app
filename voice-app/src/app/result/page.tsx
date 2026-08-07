@@ -10,6 +10,8 @@ import {
   ExternalLink,
   RotateCcw,
   AlertTriangle,
+  X,
+  Download,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -232,6 +234,7 @@ export default function ResultPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [rankingResetAt, setRankingResetAt] = useState<string | null>(null);
+  const [selectedRow, setSelectedRow] = useState<VoiceMember | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -358,6 +361,51 @@ export default function ResultPage() {
     doc.save(`voice-member-${new Date().toISOString().split("T")[0]}.pdf`);
   };
 
+  const exportSingleDetailPDF = (row: VoiceMember) => {
+    const doc = new jsPDF("p", "mm", "a4");
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 15;
+    let y = 20;
+
+    doc.setFontSize(16);
+    doc.setTextColor(88, 28, 135);
+    doc.text("Detail Voice Member", pageWidth / 2, y, { align: "center" });
+    y += 7;
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.text(`Tanggal Export: ${new Date().toLocaleDateString("id-ID")}`, pageWidth / 2, y, { align: "center" });
+    y += 12;
+
+    doc.setTextColor(30);
+    doc.setFontSize(11);
+    const fields: [string, string][] = [
+      ["Nama", row.member_name],
+      ["No. Reg", row.noreg],
+      ["Line", row.line_name],
+      ["Tanggal Kejadian", formatDate(row.input_date)],
+      ["Waktu Input", formatDateTime(row.created_at)],
+    ];
+    for (const [label, value] of fields) {
+      doc.setFont("helvetica", "bold");
+      doc.text(label, margin, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(`: ${value}`, margin + 35, y);
+      y += 7;
+    }
+
+    y += 3;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("Isi Voice Member", margin, y);
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    const lines: string[] = doc.splitTextToSize(row.voice_text, pageWidth - margin * 2);
+    doc.text(lines, margin, y);
+
+    doc.save(`voice-member-${row.noreg}-${row.input_date}.pdf`);
+  };
+
   return (
     <div className="min-h-screen py-10 px-4">
       {/* Delete Error Toast */}
@@ -402,6 +450,96 @@ export default function ResultPage() {
                   Tutup
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {selectedRow && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+          onClick={() => setSelectedRow(null)}
+        >
+          <div
+            className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 px-6 py-4 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex items-center justify-center rounded-full text-sm font-bold shrink-0 bg-blue-50 text-blue-700 border border-blue-200"
+                  style={{ width: "40px", height: "40px" }}
+                >
+                  {selectedRow.member_name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">{selectedRow.member_name}</h3>
+                  <p className="text-xs text-slate-500">Noreg {selectedRow.noreg}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedRow(null)}
+                className="text-slate-400 hover:text-slate-600 shrink-0"
+                title="Tutup"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`badge ${LINE_BADGE[selectedRow.line_name] ?? "badge-blue"}`}>
+                  {selectedRow.line_name}
+                </span>
+                <span className="text-xs text-slate-500">
+                  Tanggal Kejadian: {formatDate(selectedRow.input_date)}
+                </span>
+                <span className="text-xs text-slate-500">
+                  · Waktu Input: {formatDateTime(selectedRow.created_at)}
+                </span>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                  Isi Voice Member
+                </p>
+                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                  {selectedRow.voice_text}
+                </p>
+              </div>
+
+              {selectedRow.photo_url && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Foto Dokumentasi
+                  </p>
+                  <button
+                    onClick={() => setSelectedPhoto(selectedRow!.photo_url!)}
+                    className="block rounded-lg overflow-hidden border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all p-0 w-full"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={selectedRow.photo_url}
+                      alt="Foto dokumentasi"
+                      className="w-full max-h-64 object-cover"
+                    />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-200 bg-slate-50">
+              <button className="btn-secondary text-sm" onClick={() => setSelectedRow(null)}>
+                Tutup
+              </button>
+              <button
+                onClick={() => exportSingleDetailPDF(selectedRow!)}
+                className="btn-success text-sm"
+              >
+                <Download size={15} />
+                Download PDF
+              </button>
             </div>
           </div>
         </div>
@@ -563,7 +701,11 @@ export default function ResultPage() {
                 </thead>
                 <tbody>
                   {filtered.map((row, idx) => (
-                    <tr key={row.id}>
+                    <tr
+                      key={row.id}
+                      onClick={() => setSelectedRow(row)}
+                      className="cursor-pointer hover:bg-slate-50 transition-colors"
+                    >
                       <td className="text-center font-medium text-slate-500">{idx + 1}</td>
                       <td className="whitespace-nowrap text-slate-600">
                         {formatDate(row.input_date)}
@@ -595,7 +737,10 @@ export default function ResultPage() {
                         {row.photo_url ? (
                           <button
                             id={`btn-photo-${row.id}`}
-                            onClick={() => setSelectedPhoto(row.photo_url!)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPhoto(row.photo_url!);
+                            }}
                             className="inline-block relative overflow-hidden rounded-lg border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all p-0 bg-slate-50"
                             style={{ width: "48px", height: "48px" }}
                             title="Lihat foto"
@@ -624,7 +769,10 @@ export default function ResultPage() {
                           <div className="flex items-center justify-center gap-1.5">
                             <span className="text-xs text-slate-600 font-medium">Yakin?</span>
                             <button
-                              onClick={() => deleteRow(row.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteRow(row.id);
+                              }}
                               disabled={deletingId === row.id}
                               className="flex items-center justify-center w-7 h-7 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50"
                               title="Ya, hapus"
@@ -636,7 +784,10 @@ export default function ResultPage() {
                               )}
                             </button>
                             <button
-                              onClick={() => setConfirmId(null)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setConfirmId(null);
+                              }}
                               className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
                               title="Batal"
                             >
@@ -645,7 +796,10 @@ export default function ResultPage() {
                           </div>
                         ) : (
                           <button
-                            onClick={() => setConfirmId(row.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirmId(row.id);
+                            }}
                             className="flex items-center justify-center w-8 h-8 rounded-lg mx-auto text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                             title="Hapus data"
                           >
