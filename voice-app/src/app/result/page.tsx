@@ -361,7 +361,7 @@ export default function ResultPage() {
     doc.save(`voice-member-${new Date().toISOString().split("T")[0]}.pdf`);
   };
 
-  const exportSingleDetailPDF = (row: VoiceMember) => {
+  const exportSingleDetailPDF = async (row: VoiceMember) => {
     const doc = new jsPDF("p", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 15;
@@ -402,6 +402,30 @@ export default function ResultPage() {
     doc.setFontSize(10);
     const lines: string[] = doc.splitTextToSize(row.voice_text, pageWidth - margin * 2);
     doc.text(lines, margin, y);
+    y += lines.length * 5 + 8;
+
+    if (row.photo_url) {
+      try {
+        const res = await fetch(row.photo_url);
+        const blob = await res.blob();
+        const dataUrl: string = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(blob);
+        });
+        const format = blob.type.includes("png") ? "PNG" : "JPEG";
+        const imgWidth = pageWidth - margin * 2;
+        const imgHeight = imgWidth * 0.6;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.text("Foto Dokumentasi", margin, y);
+        y += 5;
+        doc.addImage(dataUrl, format, margin, y, imgWidth, imgHeight);
+      } catch (e) {
+        console.warn("Gagal menyematkan foto ke PDF, melanjutkan tanpa foto.", e);
+      }
+    }
 
     doc.save(`voice-member-${row.noreg}-${row.input_date}.pdf`);
   };
