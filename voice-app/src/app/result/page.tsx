@@ -417,11 +417,11 @@ export default function ResultPage() {
         const format = blob.type.includes("png") ? "PNG" : "JPEG";
         const imgWidth = pageWidth - margin * 2;
         const imgHeight = imgWidth * 0.6;
+        const imageY = y + 5;
+        doc.addImage(dataUrl, format, margin, imageY, imgWidth, imgHeight);
         doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
         doc.text("Foto Dokumentasi", margin, y);
-        y += 5;
-        doc.addImage(dataUrl, format, margin, y, imgWidth, imgHeight);
       } catch (e) {
         console.warn("Gagal menyematkan foto ke PDF, melanjutkan tanpa foto.", e);
       }
