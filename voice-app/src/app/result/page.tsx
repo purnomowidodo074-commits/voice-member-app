@@ -458,7 +458,7 @@ export default function ResultPage() {
       {/* Detail Modal */}
       {selectedRow && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+          className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
           onClick={() => setSelectedRow(null)}
         >
           <div
