@@ -364,6 +364,7 @@ export default function ResultPage() {
   const exportSingleDetailPDF = async (row: VoiceMember) => {
     const doc = new jsPDF("p", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 15;
     let y = 20;
 
@@ -401,8 +402,16 @@ export default function ResultPage() {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     const lines: string[] = doc.splitTextToSize(row.voice_text, pageWidth - margin * 2);
-    doc.text(lines, margin, y);
-    y += lines.length * 5 + 8;
+    const lineHeight = 5; // matches the existing `y += lines.length * 5 + 8` spacing already in this function
+    for (const line of lines) {
+      if (y > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
+      doc.text(line, margin, y);
+      y += lineHeight;
+    }
+    y += 8; // preserve the existing spacing gap that follows the text block
 
     if (row.photo_url) {
       try {
@@ -417,6 +426,10 @@ export default function ResultPage() {
         const format = blob.type.includes("png") ? "PNG" : "JPEG";
         const imgWidth = pageWidth - margin * 2;
         const imgHeight = imgWidth * 0.6;
+        if (y + imgHeight > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
         const imageY = y + 5;
         doc.addImage(dataUrl, format, margin, imageY, imgWidth, imgHeight);
         doc.setFont("helvetica", "bold");
@@ -446,7 +459,7 @@ export default function ResultPage() {
       {/* Photo Modal */}
       {selectedPhoto && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
           onClick={() => setSelectedPhoto(null)}
         >
           <div
@@ -482,7 +495,7 @@ export default function ResultPage() {
       {/* Detail Modal */}
       {selectedRow && (
         <div
-          className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
           onClick={() => setSelectedRow(null)}
         >
           <div
