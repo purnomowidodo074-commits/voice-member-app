@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   RefreshCw,
   Search,
   ImageIcon,
+  ImagePlus,
   FileText,
   Inbox,
   ExternalLink,
@@ -235,6 +236,10 @@ export default function ResultPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [rankingResetAt, setRankingResetAt] = useState<string | null>(null);
   const [selectedRow, setSelectedRow] = useState<VoiceMember | null>(null);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [uploadTargetId, setUploadTargetId] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -318,6 +323,59 @@ export default function ResultPage() {
       setDeletingId(null);
       setConfirmId(null);
     }
+  };
+
+  const uploadPhotoForRow = async (row: VoiceMember, file: File) => {
+    if (!file.type.startsWith("image/")) return;
+
+    setUploadingId(row.id);
+    setUploadError(null);
+    try {
+      const ext = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadErr } = await supabase.storage
+        .from("voice-photos")
+        .upload(fileName, file, { upsert: false });
+      if (uploadErr) throw uploadErr;
+
+      const { data: urlData } = supabase.storage
+        .from("voice-photos")
+        .getPublicUrl(fileName);
+      const photo_url = urlData.publicUrl;
+
+      const { error: updateErr } = await supabase
+        .from("voice_members")
+        .update({ photo_url })
+        .eq("id", row.id);
+      if (updateErr) throw updateErr;
+
+      setData((prev) =>
+        prev.map((r) => (r.id === row.id ? { ...r, photo_url } : r))
+      );
+      setFiltered((prev) =>
+        prev.map((r) => (r.id === row.id ? { ...r, photo_url } : r))
+      );
+      setSelectedRow((prev) =>
+        prev && prev.id === row.id ? { ...prev, photo_url } : prev
+      );
+    } catch (e: unknown) {
+      setUploadError(e instanceof Error ? e.message : "Gagal mengunggah foto");
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  const triggerPhotoUpload = (rowId: string) => {
+    setUploadTargetId(rowId);
+    uploadInputRef.current?.click();
+  };
+
+  const handleUploadInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file next time
+    if (!file || !uploadTargetId) return;
+    const row = data.find((r) => r.id === uploadTargetId);
+    if (row) uploadPhotoForRow(row, file);
   };
 
   const resetRanking = async () => {
@@ -445,12 +503,32 @@ export default function ResultPage() {
 
   return (
     <div className="min-h-screen py-10 px-4">
+      {/* Hidden input untuk upload foto entri yang belum ada fotonya */}
+      <input
+        ref={uploadInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleUploadInputChange}
+      />
+
       {/* Delete Error Toast */}
       {deleteError && (
         <div className="fixed top-5 right-4 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg border border-red-200 bg-white max-w-sm">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <p className="text-sm font-medium text-slate-700">{deleteError}</p>
           <button onClick={() => setDeleteError(null)} className="ml-auto text-slate-400 hover:text-slate-600">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      )}
+
+      {/* Upload Error Toast */}
+      {uploadError && (
+        <div className="fixed top-20 right-4 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg border border-red-200 bg-white max-w-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <p className="text-sm font-medium text-slate-700">{uploadError}</p>
+          <button onClick={() => setUploadError(null)} className="ml-auto text-slate-400 hover:text-slate-600">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
@@ -788,6 +866,24 @@ export default function ResultPage() {
                               alt="thumb"
                               className="w-full h-full object-cover"
                             />
+                          </button>
+                        ) : !isAdmin ? (
+                          <button
+                            id={`btn-upload-photo-${row.id}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              triggerPhotoUpload(row.id);
+                            }}
+                            disabled={uploadingId === row.id}
+                            className="flex items-center justify-center rounded-lg mx-auto bg-slate-50 border border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50 transition-all disabled:opacity-60"
+                            style={{ width: "48px", height: "48px" }}
+                            title="Unggah foto"
+                          >
+                            {uploadingId === row.id ? (
+                              <span className="spinner" style={{ width: "16px", height: "16px", borderWidth: "2px" }} />
+                            ) : (
+                              <ImagePlus size={18} className="text-slate-400" />
+                            )}
                           </button>
                         ) : (
                           <div
