@@ -108,9 +108,23 @@ CREATE POLICY "Allow anon upload voice-photos"
   WITH CHECK (bucket_id = 'voice-photos');
 
 -- ============================================================
+-- 8. voice_members: policy UPDATE
+-- Dibutuhkan agar member bisa menambahkan foto ke entri yang sudah
+-- terkirim tanpa foto (lihat docs/superpowers/specs/2026-08-08-result-photo-upload-design.md).
+-- Tanpa ini, UPDATE ditolak dengan error "new row violates row-level
+-- security policy" — pola yang sama seperti kasus bucket voice-photos.
+-- ============================================================
+DROP POLICY IF EXISTS "Allow public update" ON public.voice_members;
+CREATE POLICY "Allow public update"
+  ON public.voice_members FOR UPDATE
+  USING (true)
+  WITH CHECK (true);
+
+-- ============================================================
 -- SELESAI. Verifikasi:
 -- SELECT * FROM member_accounts;
 -- SELECT column_name FROM information_schema.columns WHERE table_name = 'voice_members';
 -- SELECT * FROM app_settings;
 -- SELECT policyname FROM pg_policies WHERE schemaname='storage' AND tablename='objects';
+-- SELECT policyname FROM pg_policies WHERE schemaname='public' AND tablename='voice_members';
 -- ============================================================
