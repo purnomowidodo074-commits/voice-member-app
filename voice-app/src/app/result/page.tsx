@@ -624,7 +624,7 @@ export default function ResultPage() {
                 </p>
               </div>
 
-              {selectedRow.photo_url && (
+              {selectedRow.photo_url ? (
                 <div>
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
                     Foto Dokumentasi
@@ -641,6 +641,29 @@ export default function ResultPage() {
                     />
                   </button>
                 </div>
+              ) : (
+                !isAdmin && (
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                      Foto Dokumentasi
+                    </p>
+                    <button
+                      id="btn-upload-photo-modal"
+                      onClick={() => triggerPhotoUpload(selectedRow!.id)}
+                      disabled={uploadingId === selectedRow.id}
+                      className="flex flex-col items-center justify-center gap-2 w-full rounded-lg border border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50 transition-all py-8 disabled:opacity-60"
+                    >
+                      {uploadingId === selectedRow.id ? (
+                        <span className="spinner" style={{ width: "20px", height: "20px", borderWidth: "2px" }} />
+                      ) : (
+                        <>
+                          <ImagePlus size={22} className="text-slate-400" />
+                          <span className="text-xs text-slate-500 font-medium">Klik untuk unggah foto</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )
               )}
             </div>
 
