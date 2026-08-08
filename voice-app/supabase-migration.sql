@@ -91,8 +91,26 @@ CREATE POLICY "Allow anon update app_settings"
   WITH CHECK (true);
 
 -- ============================================================
+-- 7. Storage bucket voice-photos: policy INSERT/SELECT
+-- Bucket dibuat manual di dashboard (lihat SUPABASE_SETUP.md), tapi
+-- policy RLS-nya tidak ikut termigrasi ke project Supabase yang baru,
+-- sehingga upload foto voice member gagal dengan error
+-- "new row violates row-level security policy".
+-- ============================================================
+DROP POLICY IF EXISTS "Public read voice-photos" ON storage.objects;
+CREATE POLICY "Public read voice-photos"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'voice-photos');
+
+DROP POLICY IF EXISTS "Allow anon upload voice-photos" ON storage.objects;
+CREATE POLICY "Allow anon upload voice-photos"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'voice-photos');
+
+-- ============================================================
 -- SELESAI. Verifikasi:
 -- SELECT * FROM member_accounts;
 -- SELECT column_name FROM information_schema.columns WHERE table_name = 'voice_members';
 -- SELECT * FROM app_settings;
+-- SELECT policyname FROM pg_policies WHERE schemaname='storage' AND tablename='objects';
 -- ============================================================
