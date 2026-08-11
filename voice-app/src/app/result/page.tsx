@@ -267,6 +267,9 @@ export default function ResultPage() {
   const [uploadTargetId, setUploadTargetId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
+  const [commentDraft, setCommentDraft] = useState({ tlGl: "", sectH: "", deptH: "" });
+  const [savingComment, setSavingComment] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -329,6 +332,18 @@ export default function ResultPage() {
     }
     setFiltered(result);
   }, [data, search, lineFilter]);
+
+  // Reset komentar draft setiap kali modal dibuka untuk baris berbeda,
+  // supaya draft yang belum disimpan tidak "bocor" ke baris lain.
+  useEffect(() => {
+    if (!selectedRow) return;
+    setCommentDraft({
+      tlGl: selectedRow.comment_tl_gl ?? "",
+      sectH: selectedRow.comment_sect_h ?? "",
+      deptH: selectedRow.comment_dept_h ?? "",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRow?.id]);
 
   const deleteRow = async (id: string) => {
     setDeletingId(id);
@@ -403,6 +418,31 @@ export default function ResultPage() {
     if (!file || !uploadTargetId) return;
     const row = data.find((r) => r.id === uploadTargetId);
     if (row) uploadPhotoForRow(row, file);
+  };
+
+  const saveComments = async (row: VoiceMember) => {
+    setSavingComment(true);
+    setCommentError(null);
+    try {
+      const updates = {
+        comment_tl_gl: commentDraft.tlGl.trim() || null,
+        comment_sect_h: commentDraft.sectH.trim() || null,
+        comment_dept_h: commentDraft.deptH.trim() || null,
+      };
+      const { error: updateErr } = await supabase
+        .from("voice_members")
+        .update(updates)
+        .eq("id", row.id);
+      if (updateErr) throw updateErr;
+
+      setData((prev) => prev.map((r) => (r.id === row.id ? { ...r, ...updates } : r)));
+      setFiltered((prev) => prev.map((r) => (r.id === row.id ? { ...r, ...updates } : r)));
+      setSelectedRow((prev) => (prev && prev.id === row.id ? { ...prev, ...updates } : prev));
+    } catch (e: unknown) {
+      setCommentError(e instanceof Error ? e.message : "Gagal menyimpan komentar");
+    } finally {
+      setSavingComment(false);
+    }
   };
 
   const resetRanking = async () => {
@@ -561,6 +601,17 @@ export default function ResultPage() {
         </div>
       )}
 
+      {/* Comment Error Toast */}
+      {commentError && (
+        <div className="fixed top-36 right-4 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg border border-red-200 bg-white max-w-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <p className="text-sm font-medium text-slate-700">{commentError}</p>
+          <button onClick={() => setCommentError(null)} className="ml-auto text-slate-400 hover:text-slate-600">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      )}
+
       {/* Photo Modal */}
       {selectedPhoto && (
         <div
@@ -650,6 +701,69 @@ export default function ResultPage() {
                   {selectedRow.voice_text}
                 </p>
               </div>
+
+              {isAdmin && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Tanggapan
+                  </p>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs font-medium text-slate-600 mb-1 block">
+                        Komentar TL/GL
+                      </label>
+                      <textarea
+                        value={commentDraft.tlGl}
+                        onChange={(e) =>
+                          setCommentDraft((prev) => ({ ...prev, tlGl: e.target.value }))
+                        }
+                        rows={2}
+                        className="form-input w-full text-sm"
+                        placeholder="Tulis komentar TL/GL..."
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-600 mb-1 block">
+                        Komentar Sect. H
+                      </label>
+                      <textarea
+                        value={commentDraft.sectH}
+                        onChange={(e) =>
+                          setCommentDraft((prev) => ({ ...prev, sectH: e.target.value }))
+                        }
+                        rows={2}
+                        className="form-input w-full text-sm"
+                        placeholder="Tulis komentar Sect. H..."
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-600 mb-1 block">
+                        Komentar Dept H.
+                      </label>
+                      <textarea
+                        value={commentDraft.deptH}
+                        onChange={(e) =>
+                          setCommentDraft((prev) => ({ ...prev, deptH: e.target.value }))
+                        }
+                        rows={2}
+                        className="form-input w-full text-sm"
+                        placeholder="Tulis komentar Dept H...."
+                      />
+                    </div>
+                    <button
+                      id="btn-save-comments"
+                      onClick={() => saveComments(selectedRow!)}
+                      disabled={savingComment}
+                      className="btn-primary text-sm py-1.5 px-3"
+                    >
+                      {savingComment && (
+                        <span className="spinner" style={{ width: "14px", height: "14px", borderWidth: "2px" }} />
+                      )}
+                      Simpan Komentar
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {selectedRow.photo_url ? (
                 <div>
