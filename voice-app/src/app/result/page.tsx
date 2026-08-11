@@ -538,6 +538,37 @@ export default function ResultPage() {
     }
     y += 8; // preserve the existing spacing gap that follows the text block
 
+    const comments = filledComments(row);
+    if (comments.length > 0) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text("Tanggapan", margin, y);
+      y += 6;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      for (const c of comments) {
+        if (y > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+        doc.setFont("helvetica", "bold");
+        doc.text(c.label, margin, y);
+        y += 5;
+        doc.setFont("helvetica", "normal");
+        const commentLines: string[] = doc.splitTextToSize(c.value, pageWidth - margin * 2);
+        for (const line of commentLines) {
+          if (y > pageHeight - margin) {
+            doc.addPage();
+            y = margin;
+          }
+          doc.text(line, margin, y);
+          y += 5;
+        }
+        y += 3;
+      }
+      y += 5;
+    }
+
     if (row.photo_url) {
       try {
         const res = await fetch(row.photo_url);
