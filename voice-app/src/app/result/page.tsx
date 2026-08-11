@@ -765,6 +765,24 @@ export default function ResultPage() {
                 </div>
               )}
 
+              {!isAdmin && filledComments(selectedRow).length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Tanggapan
+                  </p>
+                  <div className="space-y-3">
+                    {filledComments(selectedRow).map((c) => (
+                      <div key={c.label}>
+                        <p className="text-xs font-medium text-slate-500 mb-1">{c.label}</p>
+                        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                          {c.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {selectedRow.photo_url ? (
                 <div>
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
