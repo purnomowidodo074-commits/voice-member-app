@@ -51,6 +51,33 @@ function formatDateTime(dtStr: string) {
   });
 }
 
+const COMMENT_FIELDS: {
+  key: "comment_tl_gl" | "comment_sect_h" | "comment_dept_h";
+  label: string;
+}[] = [
+  { key: "comment_tl_gl", label: "Komentar TL/GL" },
+  { key: "comment_sect_h", label: "Komentar Sect. H" },
+  { key: "comment_dept_h", label: "Komentar Dept H." },
+];
+
+function filledComments(row: VoiceMember): { label: string; value: string }[] {
+  return COMMENT_FIELDS.map((f) => ({
+    label: f.label,
+    value: (row[f.key] ?? "").trim(),
+  })).filter((c) => c.value.length > 0);
+}
+
+function CommentBadge({ row }: { row: VoiceMember }) {
+  const count = filledComments(row).length;
+  const badgeClass =
+    count === 3 ? "badge-green" : count === 0 ? "badge-gray" : "badge-amber";
+  return (
+    <span className={`badge ${badgeClass}`} title={`Tanggapan: ${count} dari 3 terisi`}>
+      {count}/3
+    </span>
+  );
+}
+
 function MemberBarChart({
   data,
   resetAt,
@@ -833,6 +860,7 @@ export default function ResultPage() {
                     <th>Line</th>
                     <th>Voice Member</th>
                     <th className="w-20 text-center">Foto</th>
+                    {isAdmin && <th className="w-24 text-center">Tanggapan</th>}
                     <th>Waktu Input</th>
                     <th className="w-20 text-center">Aksi</th>
                   </tr>
@@ -917,6 +945,11 @@ export default function ResultPage() {
                           </div>
                         )}
                       </td>
+                      {isAdmin && (
+                        <td className="text-center">
+                          <CommentBadge row={row} />
+                        </td>
+                      )}
                       <td className="whitespace-nowrap text-slate-500 text-xs">
                         {formatDateTime(row.created_at)}
                       </td>
