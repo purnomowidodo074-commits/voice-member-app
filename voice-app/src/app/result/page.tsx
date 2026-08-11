@@ -333,18 +333,6 @@ export default function ResultPage() {
     setFiltered(result);
   }, [data, search, lineFilter]);
 
-  // Reset komentar draft setiap kali modal dibuka untuk baris berbeda,
-  // supaya draft yang belum disimpan tidak "bocor" ke baris lain.
-  useEffect(() => {
-    if (!selectedRow) return;
-    setCommentDraft({
-      tlGl: selectedRow.comment_tl_gl ?? "",
-      sectH: selectedRow.comment_sect_h ?? "",
-      deptH: selectedRow.comment_dept_h ?? "",
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRow?.id]);
-
   const deleteRow = async (id: string) => {
     setDeletingId(id);
     setDeleteError(null);
@@ -418,6 +406,15 @@ export default function ResultPage() {
     if (!file || !uploadTargetId) return;
     const row = data.find((r) => r.id === uploadTargetId);
     if (row) uploadPhotoForRow(row, file);
+  };
+
+  const openRow = (row: VoiceMember) => {
+    setSelectedRow(row);
+    setCommentDraft({
+      tlGl: row.comment_tl_gl ?? "",
+      sectH: row.comment_sect_h ?? "",
+      deptH: row.comment_dept_h ?? "",
+    });
   };
 
   const saveComments = async (row: VoiceMember) => {
@@ -1032,7 +1029,7 @@ export default function ResultPage() {
                   {filtered.map((row, idx) => (
                     <tr
                       key={row.id}
-                      onClick={() => setSelectedRow(row)}
+                      onClick={() => openRow(row)}
                       className="cursor-pointer hover:bg-slate-50 transition-colors"
                     >
                       <td className="text-center font-medium text-slate-500">{idx + 1}</td>
