@@ -121,6 +121,22 @@ CREATE POLICY "Allow public update"
   WITH CHECK (true);
 
 -- ============================================================
+-- 9. voice_members: kolom komentar TL/GL, Sect. H, Dept H.
+-- Kolom nullable untuk tanggapan admin per entri voice member
+-- (lihat docs/superpowers/specs/2026-08-11-result-tl-gl-comments-design.md).
+-- Diisi lewat modal detail admin di /result, ditampilkan ke member
+-- pemilik entri di modal detail miliknya sendiri. Tidak perlu policy
+-- RLS baru — policy UPDATE dari section 8 di atas sudah mencakup
+-- kolom apapun di tabel ini.
+-- ============================================================
+ALTER TABLE public.voice_members
+  ADD COLUMN IF NOT EXISTS comment_tl_gl TEXT DEFAULT NULL;
+ALTER TABLE public.voice_members
+  ADD COLUMN IF NOT EXISTS comment_sect_h TEXT DEFAULT NULL;
+ALTER TABLE public.voice_members
+  ADD COLUMN IF NOT EXISTS comment_dept_h TEXT DEFAULT NULL;
+
+-- ============================================================
 -- SELESAI. Verifikasi:
 -- SELECT * FROM member_accounts;
 -- SELECT column_name FROM information_schema.columns WHERE table_name = 'voice_members';

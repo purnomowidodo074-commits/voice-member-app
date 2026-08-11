@@ -7,6 +7,9 @@ export interface VoiceMember {
   line_name: string;
   voice_text: string;
   photo_url: string | null;
+  comment_tl_gl: string | null;
+  comment_sect_h: string | null;
+  comment_dept_h: string | null;
 }
 
 export const LINE_OPTIONS = [
