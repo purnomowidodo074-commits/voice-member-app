@@ -18,6 +18,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { supabase } from "@/lib/supabase";
 import { VoiceMember, LINE_OPTIONS } from "@/lib/types";
+import { compressImage } from "@/lib/compressImage";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 
@@ -173,7 +174,7 @@ function MemberBarChart({
               <div className="shrink-0 rounded-full overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-600"
                    style={{ width: "28px", height: "28px", minWidth: "28px" }}>
                 {profiles[item.name] ? (
-                  <img src={profiles[item.name]!} alt="" className="w-full h-full object-cover" />
+                  <img src={profiles[item.name]!} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 ) : (
                   item.name.charAt(0).toUpperCase()
                 )}
@@ -361,11 +362,12 @@ export default function ResultPage() {
     setUploadingId(row.id);
     setUploadError(null);
     try {
-      const ext = file.name.split(".").pop();
+      const compressed = await compressImage(file);
+      const ext = compressed.name.split(".").pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { error: uploadErr } = await supabase.storage
         .from("voice-photos")
-        .upload(fileName, file, { upsert: false });
+        .upload(fileName, compressed, { upsert: false });
       if (uploadErr) throw uploadErr;
 
       const { data: urlData } = supabase.storage
@@ -824,6 +826,8 @@ export default function ResultPage() {
                     <img
                       src={selectedRow.photo_url}
                       alt="Foto dokumentasi"
+                      loading="lazy"
+                      decoding="async"
                       className="w-full max-h-64 object-cover"
                     />
                   </button>
@@ -1075,6 +1079,8 @@ export default function ResultPage() {
                             <img
                               src={row.photo_url}
                               alt="thumb"
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-full object-cover"
                             />
                           </button>

@@ -3,9 +3,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { FileText, LayoutDashboard, Mic2, LogOut, Camera, X, UserCheck } from "lucide-react";
+import { FileText, LayoutDashboard, Mic2, LogOut, Camera, X, UserCheck, BarChart3 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
+import { compressImage } from "@/lib/compressImage";
 import { useState, useRef } from "react";
 
 export default function Navbar() {
@@ -26,12 +27,13 @@ export default function Navbar() {
     setUploading(true);
     setUploadError(null);
     try {
-      const ext = file.name.split(".").pop() || "jpg";
+      const compressed = await compressImage(file, { maxDim: 512, quality: 0.8 });
+      const ext = compressed.name.split(".").pop() || "jpg";
       const fileName = `profile-${user.noreg}.${ext}`;
 
       const { error: uploadErr } = await supabase.storage
         .from("profile-photos")
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, compressed, { upsert: true });
 
       if (uploadErr) throw uploadErr;
 
@@ -98,6 +100,21 @@ export default function Navbar() {
             <FileText size={15} />
             Form Input
           </Link>
+
+          {isAdmin && (
+            <Link
+              href="/dashboard"
+              id="nav-dashboard"
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                pathname === "/dashboard"
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              }`}
+            >
+              <BarChart3 size={15} />
+              Dashboard
+            </Link>
+          )}
 
           <Link
             href="/result"

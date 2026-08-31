@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { LINE_OPTIONS } from "@/lib/types";
+import { compressImage } from "@/lib/compressImage";
 import { useAuth } from "@/components/AuthProvider";
 
 function getTodayDate() {
@@ -86,11 +87,12 @@ export default function FormPage() {
 
       // Upload foto jika ada
       if (photoFile) {
-        const ext = photoFile.name.split(".").pop();
+        const compressed = await compressImage(photoFile);
+        const ext = compressed.name.split(".").pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
         const { error: uploadError } = await supabase.storage
           .from("voice-photos")
-          .upload(fileName, photoFile, { upsert: false });
+          .upload(fileName, compressed, { upsert: false });
 
         if (uploadError) throw uploadError;
 
