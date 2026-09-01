@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { RefreshCw, Trophy } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { RefreshCw, Trophy, MessageSquare, CheckCircle2, Clock, TrendingUp } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -9,23 +10,28 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
   Cell,
   LabelList,
 } from "recharts";
 import { supabase } from "@/lib/supabase";
-import { LINE_OPTIONS } from "@/lib/types";
+import { LINE_OPTIONS, AGING_BUCKETS, agingBucketIndex } from "@/lib/types";
 import { useAuth } from "@/components/AuthProvider";
 
-type Row = { member_name: string; line_name: string; created_at: string };
-
-const LINE_COLORS: Record<string, string> = {
-  "Mel-Pour-Analys": "#2563eb",
-  "Mould-RCS": "#7e22ce",
-  "Core Making": "#d97706",
-  Finishing: "#16a34a",
-  Maintenance: "#e11d48",
+type Row = {
+  member_name: string;
+  line_name: string;
+  created_at: string;
+  comment_tl_gl: string | null;
+  comment_sect_h: string | null;
+  comment_dept_h: string | null;
 };
+
+const isResponded = (r: Row) =>
+  !!(r.comment_tl_gl || r.comment_sect_h || r.comment_dept_h);
+
+const AGING_FILLS = ["#16a34a", "#d97706", "#ea580c", "#dc2626"];
 
 const PODIUM = [
   { rank: 2, ring: "ring-slate-300", bar: "bg-slate-200", text: "text-slate-600", h: "h-20" },
@@ -51,24 +57,36 @@ function rankSenders(rows: Row[]): { name: string; count: number }[] {
     .sort((a, b) => b.count - a.count);
 }
 
-function monthlyTotals(rows: Row[]): { label: string; total: number }[] {
-  const map = new Map<string, number>();
+function monthlyStatus(rows: Row[]): { label: string; responded: number; pending: number }[] {
+  const map = new Map<string, { responded: number; pending: number }>();
   for (const r of rows) {
     const k = monthKey(r.created_at);
-    map.set(k, (map.get(k) ?? 0) + 1);
+    const cur = map.get(k) ?? { responded: 0, pending: 0 };
+    if (isResponded(r)) cur.responded++;
+    else cur.pending++;
+    map.set(k, cur);
   }
   return Array.from(map.entries())
     .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([key, total]) => ({ label: monthLabel(key), total }));
+    .map(([key, v]) => ({ label: monthLabel(key), ...v }));
 }
 
-function lineTotals(rows: Row[]): { line: string; total: number }[] {
-  return LINE_OPTIONS.map((line) => ({
-    line,
-    total: rows.filter((r) => r.line_name === line).length,
-  }))
+function lineStatus(rows: Row[]): { line: string; responded: number; pending: number; total: number }[] {
+  return LINE_OPTIONS.map((line) => {
+    const inLine = rows.filter((r) => r.line_name === line);
+    const responded = inLine.filter(isResponded).length;
+    return { line, responded, pending: inLine.length - responded, total: inLine.length };
+  })
     .filter((x) => x.total > 0)
     .sort((a, b) => b.total - a.total);
+}
+
+function agingBuckets(rows: Row[]): { label: string; count: number; fill: string }[] {
+  const counts = AGING_BUCKETS.map(() => 0);
+  for (const r of rows) {
+    if (!isResponded(r)) counts[agingBucketIndex(r.created_at)]++;
+  }
+  return AGING_BUCKETS.map((b, i) => ({ label: b.label, count: counts[i], fill: AGING_FILLS[i] }));
 }
 
 function Avatar({ name, photo, size }: { name: string; photo?: string | null; size: number }) {
@@ -90,6 +108,7 @@ function Avatar({ name, photo, size }: { name: string; photo?: string | null; si
 export default function DashboardPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const router = useRouter();
 
   const [rows, setRows] = useState<Row[]>([]);
   const [resetAt, setResetAt] = useState<string | null>(null);
@@ -104,7 +123,7 @@ export default function DashboardPage() {
     try {
       const { data, error: err } = await supabase
         .from("voice_members")
-        .select("member_name, line_name, created_at");
+        .select("member_name, line_name, created_at, comment_tl_gl, comment_sect_h, comment_dept_h");
       if (err) throw err;
       setRows(data ?? []);
 
@@ -137,8 +156,19 @@ export default function DashboardPage() {
   }, [rows, period, resetAt]);
 
   const senders = useMemo(() => rankSenders(rankingRows), [rankingRows]);
-  const monthly = useMemo(() => monthlyTotals(rows), [rows]);
-  const perLine = useMemo(() => lineTotals(rows), [rows]);
+  const monthly = useMemo(() => monthlyStatus(rows), [rows]);
+  const lineStat = useMemo(() => lineStatus(rows), [rows]);
+  const aging = useMemo(() => agingBuckets(rows), [rows]);
+  const kpi = useMemo(() => {
+    const total = rows.length;
+    const responded = rows.filter(isResponded).length;
+    return {
+      total,
+      responded,
+      pending: total - responded,
+      rate: total ? Math.round((responded / total) * 100) : 0,
+    };
+  }, [rows]);
 
   useEffect(() => {
     const names = senders.slice(0, 15).map((s) => s.name);
@@ -199,6 +229,22 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="space-y-6">
+            {/* Aspirasi per Line */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="p-4 rounded-xl border bg-white border-slate-200">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Member Voice</p>
+                <p className="text-2xl font-bold mt-1 text-slate-800">{rows.length}</p>
+              </div>
+              {LINE_OPTIONS.map((line) => (
+                <div key={line} className="p-4 rounded-xl border bg-white border-slate-200">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{line}</p>
+                  <p className="text-2xl font-bold mt-1 text-slate-800">
+                    {rows.filter((r) => r.line_name === line).length}
+                  </p>
+                </div>
+              ))}
+            </div>
+
             {/* Top Pengirim */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-6 py-5">
               <div className="flex items-center gap-2 mb-5 flex-wrap">
@@ -278,6 +324,51 @@ export default function DashboardPage() {
               )}
             </div>
 
+            {/* Status Tanggapan per Line + KPI */}
+            <div className="grid grid-cols-4 gap-3 lg:gap-6">
+              <div className="col-span-3 bg-white rounded-xl shadow-sm border border-slate-200 px-4 sm:px-6 py-5">
+                <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wider mb-5">
+                  Status Tanggapan per Line
+                </h3>
+                {lineStat.length === 0 ? (
+                  <p className="text-sm text-slate-400 py-8 text-center">Belum ada data.</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={lineStat} layout="vertical" margin={{ top: 4, right: 32, left: 8, bottom: 4 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                      <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "#e2e8f0" }} />
+                      <YAxis type="category" dataKey="line" width={120} tick={{ fontSize: 12, fill: "#334155" }} tickLine={false} axisLine={false} />
+                      <Tooltip cursor={{ fill: "#f1f5f9" }} itemStyle={{ color: "#334155" }} />
+                      <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => <span style={{ color: "#334155" }}>{value}</span>} />
+                      <Bar dataKey="responded" stackId="a" name="Ditanggapi" fill="#16a34a" maxBarSize={32} radius={[4, 0, 0, 4]} />
+                      <Bar dataKey="pending" stackId="a" name="Belum" fill="#e2e8f0" maxBarSize={32} radius={[0, 4, 4, 0]}>
+                        <LabelList dataKey="total" position="right" style={{ fontSize: 12, fill: "#475569", fontWeight: 600 }} />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+
+              <div className="grid grid-rows-4 gap-3 lg:gap-6">
+                {[
+                  { label: "Total Aspirasi", value: kpi.total, Icon: MessageSquare, color: "text-slate-700", bg: "bg-slate-100" },
+                  { label: "Sudah Ditanggapi", value: kpi.responded, Icon: CheckCircle2, color: "text-green-700", bg: "bg-green-100" },
+                  { label: "Belum Ditanggapi", value: kpi.pending, Icon: Clock, color: "text-amber-700", bg: "bg-amber-100" },
+                  { label: "Response Rate", value: `${kpi.rate}%`, Icon: TrendingUp, color: "text-blue-700", bg: "bg-blue-100" },
+                ].map(({ label, value, Icon, color, bg }) => (
+                  <div key={label} className="bg-white rounded-xl shadow-sm border border-slate-200 px-3 lg:px-5 flex items-center gap-2 lg:gap-4">
+                    <div className={`hidden sm:flex w-11 h-11 rounded-lg items-center justify-center shrink-0 ${bg}`}>
+                      <Icon size={20} className={color} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-lg lg:text-2xl font-bold text-slate-900 leading-none">{value}</p>
+                      <p className="text-[11px] lg:text-xs text-slate-500 mt-1 leading-tight">{label}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Total per bulan */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-6 py-5">
@@ -292,37 +383,49 @@ export default function DashboardPage() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                     <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "#e2e8f0" }} />
                     <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: "#64748b" }} tickLine={false} axisLine={false} />
-                    <Tooltip cursor={{ fill: "#f1f5f9" }} />
-                    <Bar dataKey="total" name="Aspirasi" fill="#7c3aed" radius={[4, 4, 0, 0]} maxBarSize={64}>
-                      <LabelList dataKey="total" position="top" style={{ fontSize: 12, fill: "#475569", fontWeight: 600 }} />
-                    </Bar>
+                    <Tooltip cursor={{ fill: "#f1f5f9" }} itemStyle={{ color: "#334155" }} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => <span style={{ color: "#334155" }}>{value}</span>} />
+                    <Bar dataKey="responded" stackId="a" name="Ditanggapi" fill="#7c3aed" maxBarSize={64} />
+                    <Bar dataKey="pending" stackId="a" name="Belum" fill="#ddd6fe" radius={[4, 4, 0, 0]} maxBarSize={64} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
             </div>
 
-            {/* Per line */}
+            {/* Umur aspirasi belum ditanggapi */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-6 py-5">
-              <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wider mb-5">
-                Voice Member per Line
+              <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wider mb-1">
+                Umur Aspirasi Belum Ditanggapi
               </h3>
-              {perLine.length === 0 ? (
-                <p className="text-sm text-slate-400 py-8 text-center">Belum ada data.</p>
+              {aging.every((b) => b.count === 0) ? (
+                <p className="text-sm text-slate-400 py-8 text-center">Semua aspirasi sudah ditanggapi 🎉</p>
               ) : (
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={perLine} layout="vertical" margin={{ top: 4, right: 32, left: 8, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "#e2e8f0" }} />
-                    <YAxis type="category" dataKey="line" width={120} tick={{ fontSize: 12, fill: "#334155" }} tickLine={false} axisLine={false} />
-                    <Tooltip cursor={{ fill: "#f1f5f9" }} />
-                    <Bar dataKey="total" name="Aspirasi" radius={[0, 4, 4, 0]} maxBarSize={32}>
-                      {perLine.map((d) => (
-                        <Cell key={d.line} fill={LINE_COLORS[d.line] ?? "#7c3aed"} />
-                      ))}
-                      <LabelList dataKey="total" position="right" style={{ fontSize: 12, fill: "#475569", fontWeight: 600 }} />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <>
+                  <p className="text-xs text-slate-400 mb-4">Klik batang untuk melihat daftar aspirasinya</p>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={aging} layout="vertical" margin={{ top: 4, right: 32, left: 8, bottom: 4 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                      <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12, fill: "#64748b" }} tickLine={false} axisLine={{ stroke: "#e2e8f0" }} />
+                      <YAxis type="category" dataKey="label" width={90} tick={{ fontSize: 12, fill: "#334155" }} tickLine={false} axisLine={false} />
+                      <Tooltip cursor={{ fill: "#f1f5f9" }} />
+                      <Bar
+                        dataKey="count"
+                        name="Aspirasi"
+                        radius={[0, 4, 4, 0]}
+                        maxBarSize={32}
+                        cursor="pointer"
+                        onClick={(_, index) => {
+                          if (aging[index]?.count) router.push(`/result?belum=1&umur=${index}`);
+                        }}
+                      >
+                        {aging.map((d) => (
+                          <Cell key={d.label} fill={d.fill} />
+                        ))}
+                        <LabelList dataKey="count" position="right" style={{ fontSize: 12, fill: "#475569", fontWeight: 600 }} />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </>
               )}
             </div>
             </div>

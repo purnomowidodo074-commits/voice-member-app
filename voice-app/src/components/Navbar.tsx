@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { FileText, LayoutDashboard, Mic2, LogOut, Camera, X, UserCheck, BarChart3 } from "lucide-react";
+import { FileText, LayoutDashboard, Mic2, LogOut, Camera, X, UserCheck, BarChart3, Menu } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/compressImage";
@@ -13,6 +13,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const { user, logout, updateProfilePhoto } = useAuth();
   const [showUpload, setShowUpload] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -20,6 +21,13 @@ export default function Navbar() {
   if (pathname === "/login" || !user) return null;
 
   const isAdmin = user.role === "admin";
+
+  const links = [
+    { href: "/", id: "nav-form", Icon: FileText, label: "Form Input", show: true },
+    { href: "/dashboard", id: "nav-dashboard", Icon: BarChart3, label: "Dashboard", show: isAdmin },
+    { href: "/result", id: "nav-result", Icon: LayoutDashboard, label: isAdmin ? "Semua Result" : "Result Saya", show: true },
+    { href: "/members", id: "nav-members", Icon: UserCheck, label: "Aktivasi", show: isAdmin },
+  ].filter((l) => l.show);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -86,67 +94,37 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Nav Links */}
-        <div className="flex items-center gap-1">
-          <Link
-            href="/"
-            id="nav-form"
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              pathname === "/"
-                ? "bg-blue-50 text-blue-700"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-            }`}
-          >
-            <FileText size={15} />
-            Form Input
-          </Link>
-
-          {isAdmin && (
+        {/* Nav Links (desktop) */}
+        <div className="hidden md:flex items-center gap-1">
+          {links.map(({ href, id, Icon, label }) => (
             <Link
-              href="/dashboard"
-              id="nav-dashboard"
+              key={href}
+              href={href}
+              id={id}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                pathname === "/dashboard"
+                pathname === href
                   ? "bg-blue-50 text-blue-700"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
-              <BarChart3 size={15} />
-              Dashboard
+              <Icon size={15} />
+              {label}
             </Link>
-          )}
-
-          <Link
-            href="/result"
-            id="nav-result"
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              pathname === "/result"
-                ? "bg-blue-50 text-blue-700"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-            }`}
-          >
-            <LayoutDashboard size={15} />
-            {isAdmin ? "Semua Result" : "Result Saya"}
-          </Link>
-
-          {isAdmin && (
-            <Link
-              href="/members"
-              id="nav-members"
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                pathname === "/members"
-                  ? "bg-blue-50 text-blue-700"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-              }`}
-            >
-              <UserCheck size={15} />
-              Aktivasi
-            </Link>
-          )}
+          ))}
         </div>
 
         {/* User Info + Logout */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Hamburger (mobile) */}
+          <button
+            onClick={() => setMenuOpen((o) => !o)}
+            className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+            aria-label="Menu"
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
+
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-slate-50 border-slate-200">
             <button
               onClick={() => !isAdmin && setShowUpload(true)}
@@ -191,6 +169,28 @@ export default function Navbar() {
           </button>
         </div>
       </div>
+
+      {/* Nav Links (mobile dropdown) */}
+      {menuOpen && (
+        <div className="md:hidden border-t border-slate-200 bg-white px-4 py-2 space-y-1">
+          {links.map(({ href, id, Icon, label }) => (
+            <Link
+              key={href}
+              href={href}
+              id={`${id}-m`}
+              onClick={() => setMenuOpen(false)}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                pathname === href
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              }`}
+            >
+              <Icon size={16} />
+              {label}
+            </Link>
+          ))}
+        </div>
+      )}
 
       {/* Upload Modal */}
       {showUpload && (

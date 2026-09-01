@@ -17,7 +17,7 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { supabase } from "@/lib/supabase";
-import { VoiceMember, LINE_OPTIONS } from "@/lib/types";
+import { VoiceMember, LINE_OPTIONS, AGING_BUCKETS, agingBucketIndex } from "@/lib/types";
 import { compressImage } from "@/lib/compressImage";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
@@ -258,6 +258,8 @@ export default function ResultPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [lineFilter, setLineFilter] = useState("");
+  const [pendingOnly, setPendingOnly] = useState(false);
+  const [ageBucket, setAgeBucket] = useState<number | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -317,11 +319,25 @@ export default function ResultPage() {
     fetchData();
   }, [fetchData]);
 
+  // Filter awal dari query param (dari klik chart dashboard: ?belum=1&umur=<idx>)
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("belum") === "1") setPendingOnly(true);
+    const u = p.get("umur");
+    if (u !== null && u !== "" && !Number.isNaN(Number(u))) setAgeBucket(Number(u));
+  }, []);
+
   // Filter & Search
   useEffect(() => {
     let result = data;
     if (lineFilter) {
       result = result.filter((r) => r.line_name === lineFilter);
+    }
+    if (pendingOnly) {
+      result = result.filter((r) => filledComments(r).length === 0);
+    }
+    if (ageBucket !== null) {
+      result = result.filter((r) => agingBucketIndex(r.created_at) === ageBucket);
     }
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -332,7 +348,7 @@ export default function ResultPage() {
       );
     }
     setFiltered(result);
-  }, [data, search, lineFilter]);
+  }, [data, search, lineFilter, pendingOnly, ageBucket]);
 
   const deleteRow = async (id: string) => {
     setDeletingId(id);
@@ -976,15 +992,27 @@ export default function ResultPage() {
               <option key={l} value={l}>{l}</option>
             ))}
           </select>
-          {(search || lineFilter) && (
+          {(search || lineFilter || pendingOnly || ageBucket !== null) && (
             <button
               className="btn-secondary whitespace-nowrap"
-              onClick={() => { setSearch(""); setLineFilter(""); }}
+              onClick={() => { setSearch(""); setLineFilter(""); setPendingOnly(false); setAgeBucket(null); }}
             >
               Reset Filter
             </button>
           )}
         </div>
+        )}
+
+        {isAdmin && (pendingOnly || ageBucket !== null) && (
+          <div className="flex flex-wrap items-center gap-2 -mt-3 mb-6 text-xs">
+            <span className="text-slate-500">Filter aktif:</span>
+            {pendingOnly && (
+              <span className="badge badge-amber">Belum ditanggapi</span>
+            )}
+            {ageBucket !== null && (
+              <span className="badge badge-purple">Umur {AGING_BUCKETS[ageBucket]?.label}</span>
+            )}
+          </div>
         )}
 
         {/* Table */}

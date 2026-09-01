@@ -21,3 +21,17 @@ export const LINE_OPTIONS = [
 ] as const;
 
 export type LineName = (typeof LINE_OPTIONS)[number];
+
+// Umur aspirasi (hari sejak created_at) — dipakai dashboard & halaman result.
+export const AGING_BUCKETS = [
+  { label: "0–7 hari", maxDays: 7 },
+  { label: "8–14 hari", maxDays: 14 },
+  { label: "15–30 hari", maxDays: 30 },
+  { label: "> 30 hari", maxDays: Infinity },
+] as const;
+
+export function agingBucketIndex(iso: string): number {
+  const days = (Date.now() - new Date(iso).getTime()) / 86_400_000;
+  const i = AGING_BUCKETS.findIndex((b) => days <= b.maxDays);
+  return i === -1 ? AGING_BUCKETS.length - 1 : i;
+}
