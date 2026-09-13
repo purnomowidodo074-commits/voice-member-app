@@ -137,10 +137,27 @@ ALTER TABLE public.voice_members
   ADD COLUMN IF NOT EXISTS comment_dept_h TEXT DEFAULT NULL;
 
 -- ============================================================
+-- 10. member_accounts: policy UPDATE untuk Lupa Password & Reset Admin
+-- Dibutuhkan agar member bisa reset password sendiri (verifikasi
+-- Noreg + Nama) dan admin bisa reset ke default "toyota@1".
+-- Tanpa ini, UPDATE ditolak "new row violates row-level security policy".
+-- ============================================================
+DROP POLICY IF EXISTS "Allow anon update member_accounts" ON public.member_accounts;
+CREATE POLICY "Allow anon update member_accounts"
+  ON public.member_accounts FOR UPDATE
+  USING (true)
+  WITH CHECK (true);
+
+-- Kolom is_self_registered untuk pendaftaran mandiri (jika belum ada)
+ALTER TABLE public.member_accounts
+  ADD COLUMN IF NOT EXISTS is_self_registered BOOLEAN DEFAULT false;
+
+-- ============================================================
 -- SELESAI. Verifikasi:
 -- SELECT * FROM member_accounts;
 -- SELECT column_name FROM information_schema.columns WHERE table_name = 'voice_members';
 -- SELECT * FROM app_settings;
 -- SELECT policyname FROM pg_policies WHERE schemaname='storage' AND tablename='objects';
 -- SELECT policyname FROM pg_policies WHERE schemaname='public' AND tablename='voice_members';
+-- SELECT policyname FROM pg_policies WHERE schemaname='public' AND tablename='member_accounts';
 -- ============================================================

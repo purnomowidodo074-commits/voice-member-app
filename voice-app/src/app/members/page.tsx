@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { RefreshCw, Search, UserCheck, UserX, UserPlus, Users } from "lucide-react";
+import { RefreshCw, Search, UserCheck, UserX, UserPlus, Users, KeyRound, AlertCircle, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { MEMBERS } from "@/lib/members";
 import { useAuth } from "@/components/AuthProvider";
@@ -27,7 +27,7 @@ function formatDateTime(dtStr: string) {
 }
 
 export default function MembersPage() {
-  const { user } = useAuth();
+  const { user, adminResetPassword } = useAuth();
   const isAdmin = user?.role === "admin";
 
   const [accounts, setAccounts] = useState<ActivatedAccount[]>([]);
@@ -35,6 +35,8 @@ export default function MembersPage() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"belum" | "sudah" | "baru">("belum");
   const [search, setSearch] = useState("");
+  const [resettingNoreg, setResettingNoreg] = useState<string | null>(null);
+  const [actionMsg, setActionMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -101,6 +103,16 @@ export default function MembersPage() {
       (a) => a.nama.toLowerCase().includes(q) || a.noreg.includes(q)
     );
   }, [memberBaru, search]);
+
+  const handleAdminReset = async (noreg: string, nama: string) => {
+    if (!confirm(`Reset password ${nama} (${noreg}) ke toyota@1 ?`)) return;
+    setResettingNoreg(noreg);
+    setActionMsg(null);
+    const res = await adminResetPassword(noreg);
+    setActionMsg({ type: res.success ? "success" : "error", text: res.message });
+    setResettingNoreg(null);
+    setTimeout(() => setActionMsg(null), 4000);
+  };
 
   if (!isAdmin) {
     return (
@@ -212,6 +224,14 @@ export default function MembersPage() {
           </div>
         </div>
 
+        {/* Action feedback */}
+        {actionMsg && (
+          <div className={`flex items-start gap-2.5 px-4 py-3 rounded-xl border mb-4 ${actionMsg.type === "success" ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
+            {actionMsg.type === "success" ? <CheckCircle2 size={16} className="text-green-500 shrink-0 mt-0.5" /> : <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />}
+            <p className={`text-sm font-medium ${actionMsg.type === "success" ? "text-green-700" : "text-red-700"}`}>{actionMsg.text}</p>
+          </div>
+        )}
+
         {/* Table */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           {loading ? (
@@ -272,6 +292,7 @@ export default function MembersPage() {
                       <th>Noreg</th>
                       <th>Nama</th>
                       <th>Waktu Daftar</th>
+                      <th className="w-32 text-center">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -282,6 +303,16 @@ export default function MembersPage() {
                         <td className="font-semibold text-slate-800">{a.nama}</td>
                         <td className="whitespace-nowrap text-slate-500 text-xs">
                           {formatDateTime(a.created_at)}
+                        </td>
+                        <td className="text-center">
+                          <button
+                            onClick={() => handleAdminReset(a.noreg, a.nama)}
+                            disabled={resettingNoreg === a.noreg}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+                          >
+                            <KeyRound size={12} />
+                            {resettingNoreg === a.noreg ? "..." : "Reset"}
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -304,6 +335,7 @@ export default function MembersPage() {
                     <th>Nama</th>
                     <th>Status</th>
                     <th>Waktu Aktivasi</th>
+                    <th className="w-32 text-center">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -317,6 +349,16 @@ export default function MembersPage() {
                       </td>
                       <td className="whitespace-nowrap text-slate-500 text-xs">
                         {formatDateTime(a.created_at)}
+                      </td>
+                      <td className="text-center">
+                        <button
+                          onClick={() => handleAdminReset(a.noreg, a.nama)}
+                          disabled={resettingNoreg === a.noreg}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+                        >
+                          <KeyRound size={12} />
+                          {resettingNoreg === a.noreg ? "..." : "Reset"}
+                        </button>
                       </td>
                     </tr>
                   ))}

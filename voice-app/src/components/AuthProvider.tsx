@@ -31,6 +31,11 @@ interface AuthContextType {
   registerNew: (noreg: string, nama: string, password: string) => Promise<ActivateResult>;
   // Login dengan noreg + password
   login: (noreg: string, password: string) => Promise<{ success: boolean; message: string }>;
+  // Lupa password — verifikasi Noreg + Nama lalu reset
+  verifyResetNoreg: (noreg: string) => Promise<{ valid: boolean; nama?: string; message: string }>;
+  resetPassword: (noreg: string, namaInput: string, newPassword: string) => Promise<ActivateResult>;
+  // Admin reset ke default toyota@1
+  adminResetPassword: (noreg: string) => Promise<ActivateResult>;
   logout: () => void;
   updateProfilePhoto: (url: string) => void;
 }
@@ -42,6 +47,9 @@ const AuthContext = createContext<AuthContextType>({
   activate: async () => ({ success: false, message: "" }),
   registerNew: async () => ({ success: false, message: "" }),
   login: async () => ({ success: false, message: "" }),
+  verifyResetNoreg: async () => ({ valid: false, message: "" }),
+  resetPassword: async () => ({ success: false, message: "" }),
+  adminResetPassword: async () => ({ success: false, message: "" }),
   logout: () => {},
   updateProfilePhoto: () => {},
 });
@@ -257,6 +265,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Lupa Password — Step 1: cek noreg ada di member_accounts
+  const verifyResetNoreg = async (noreg: string): Promise<{ valid: boolean; nama?: string; message: string }> => {
+    const trimmed = noreg.trim();
+    if (!trimmed) return { valid: false, message: "Noreg wajib diisi." };
+    const { data, error } = await supabase
+      .from("member_accounts")
+      .select("noreg, nama")
+      .eq("noreg", trimmed)
+      .single();
+    if (error || !data) {
+      const member = getMemberByNoreg(trimmed);
+      if (member) return { valid: false, message: "Akun belum diaktivasi. Silakan aktivasi terlebih dahulu." };
+      return { valid: false, message: "Noreg tidak ditemukan." };
+    }
+    return { valid: true, nama: data.nama, message: "Akun ditemukan." };
+  };
+
+  // Lupa Password — Step 2: verifikasi Nama + update password_hash
+  const resetPassword = async (noreg: string, namaInput: string, newPassword: string): Promise<ActivateResult> => {
+    const trimmedNoreg = noreg.trim();
+    const trimmedNama = namaInput.trim();
+    if (newPassword.length < 6) return { success: false, message: "Password minimal 6 karakter." };
+    if (!trimmedNama) return { success: false, message: "Nama wajib diisi untuk verifikasi." };
+    try {
+      const { data, error } = await supabase
+        .from("member_accounts")
+        .select("nama")
+        .eq("noreg", trimmedNoreg)
+        .single();
+      if (error || !data) return { success: false, message: "Akun tidak ditemukan." };
+      // Verifikasi nama — case-insensitive, ignore extra spaces
+      const normalize = (s: string) => s.trim().toUpperCase().replace(/\s+/g, " ");
+      if (normalize(data.nama) !== normalize(trimmedNama)) {
+        return { success: false, message: "Nama tidak cocok dengan data akun. Periksa kembali." };
+      }
+      const passwordHash = await hashPassword(newPassword);
+      const { error: updErr } = await supabase
+        .from("member_accounts")
+        .update({ password_hash: passwordHash })
+        .eq("noreg", trimmedNoreg);
+      if (updErr) return { success: false, message: `Gagal reset password: ${updErr.message}` };
+      return { success: true, message: "Password berhasil direset! Silakan login dengan password baru." };
+    } catch {
+      return { success: false, message: "Terjadi kesalahan. Coba lagi." };
+    }
+  };
+
+  // Admin reset ke default toyota@1
+  const adminResetPassword = async (noreg: string): Promise<ActivateResult> => {
+    try {
+      const passwordHash = await hashPassword("toyota@1");
+      const { error } = await supabase
+        .from("member_accounts")
+        .update({ password_hash: passwordHash })
+        .eq("noreg", noreg.trim());
+      if (error) return { success: false, message: `Gagal reset: ${error.message}` };
+      return { success: true, message: `Password ${noreg.trim()} direset ke toyota@1` };
+    } catch {
+      return { success: false, message: "Terjadi kesalahan." };
+    }
+  };
+
   const updateProfilePhoto = (url: string) => {
     setUser((prev) => {
       if (!prev) return prev;
@@ -273,7 +343,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, verifyNoreg, activate, registerNew, login, logout, updateProfilePhoto }}>
+    <AuthContext.Provider value={{ user, isLoading, verifyNoreg, activate, registerNew, login, verifyResetNoreg, resetPassword, adminResetPassword, logout, updateProfilePhoto }}>
       {children}
     </AuthContext.Provider>
   );
