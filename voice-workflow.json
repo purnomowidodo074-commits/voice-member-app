@@ -1,0 +1,83 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Voice Member — Alur Kerja Lengkap",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    { "id": "member", "label": "Anggota" },
+    { "id": "auth", "label": "Auth & Aktivasi" },
+    { "id": "aspirasi", "label": "Aspirasi & Penyimpanan" },
+    { "id": "admin", "label": "Admin & Analitik", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "akses", "label": "Akses", "fromCol": 0, "toCol": 0 },
+    { "id": "aktivasi", "label": "Aktivasi & Login", "fromCol": 1, "toCol": 2, "variant": "emphasis" },
+    { "id": "kirim", "label": "Kirim Aspirasi", "fromCol": 3, "toCol": 4, "variant": "emphasis" },
+    { "id": "tindak", "label": "Tindak Lanjut", "fromCol": 5, "toCol": 5, "variant": "dashed" }
+  ],
+  "groups": [
+    { "id": "akun_flow", "label": "Verifikasi Noreg → Akun Supabase", "lane": "auth", "fromCol": 1, "toCol": 2, "variant": "security" },
+    { "id": "form_flow", "label": "Form + Foto", "lane": "aspirasi", "fromCol": 3, "toCol": 4, "variant": "emphasis" },
+    { "id": "admin_flow", "label": "Tanggapan & Analitik", "lane": "admin", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "mainPath": ["portal", "loginGate", "formInput", "fotoUpload", "dbInsert"],
+  "nodes": [
+    { "id": "portal", "lane": "member", "col": 0, "type": "external", "label": "Portal Anggota", "sublabel": "voice-member-form", "width": 138 },
+    { "id": "loginGate", "lane": "auth", "col": 1, "type": "security", "label": "Login Noreg", "sublabel": "SHA-256 + RLS SELECT", "tag": "noreg + password", "width": 138 },
+    { "id": "aktivasiVerifikasi", "lane": "auth", "col": 1, "type": "backend", "label": "Verifikasi Noreg", "sublabel": "cek MEMBERS Excel + belum aktif", "width": 138, "yOffset": 82 },
+    { "id": "aktivasiBuat", "lane": "auth", "col": 1, "type": "backend", "label": "Buat Akun", "sublabel": "INSERT member_accounts", "tag": "SHA-256 hash", "width": 138, "yOffset": 164 },
+    { "id": "lupaPassword", "lane": "auth", "col": 1, "type": "security", "label": "Lupa Password", "sublabel": "Noreg + Nama → reset", "tag": "verifikasi nama", "width": 138, "yOffset": -82 },
+    { "id": "formInput", "lane": "aspirasi", "col": 3, "type": "frontend", "label": "Form Aspirasi", "sublabel": "line, voice_text, tanggal", "width": 138 },
+    { "id": "fotoUpload", "lane": "aspirasi", "col": 4, "type": "cloud", "label": "Foto Dokumentasi", "sublabel": "compress → voice-photos bucket", "tag": "public URL", "width": 138 },
+    { "id": "dbInsert", "lane": "aspirasi", "col": 5, "type": "database", "label": "voice_members", "sublabel": "INSERT + noreg + photo_url", "width": 138 },
+    { "id": "adminReset", "lane": "admin", "col": 1, "type": "security", "label": "Reset Admin", "sublabel": "ke toyota@1", "width": 138, "yOffset": -42 },
+    { "id": "resultTanggapan", "lane": "admin", "col": 4, "type": "backend", "label": "Result & Tanggapan", "sublabel": "TL / Sect H / Dept H", "tag": "UPDATE komentar", "width": 138, "yOffset": 42 },
+    { "id": "dashboard", "lane": "admin", "col": 5, "type": "backend", "label": "Dashboard Analitik", "sublabel": "aging, top pengirim, per line", "width": 138 }
+  ],
+  "edges": [
+    { "id": "e1", "from": "portal", "to": "loginGate", "label": "buka /login", "variant": "default" },
+    { "id": "e2", "from": "loginGate", "to": "aktivasiVerifikasi", "label": "belum aktivasi", "variant": "security", "role": "branch" },
+    { "id": "e3", "from": "aktivasiVerifikasi", "to": "aktivasiBuat", "label": "valid → buat password", "variant": "emphasis" },
+    { "id": "e4", "from": "aktivasiBuat", "to": "loginGate", "label": "akun aktif → login", "variant": "default", "role": "return" },
+    { "id": "e5", "from": "loginGate", "to": "lupaPassword", "label": "lupa?", "variant": "security", "role": "branch" },
+    { "id": "e6", "from": "lupaPassword", "to": "loginGate", "label": "reset → login", "variant": "security", "role": "return" },
+    { "id": "e7", "from": "loginGate", "to": "formInput", "label": "auth OK", "variant": "emphasis" },
+    { "id": "e8", "from": "formInput", "to": "fotoUpload", "label": "foto opsional", "variant": "default" },
+    { "id": "e9", "from": "fotoUpload", "to": "dbInsert", "label": "upload → URL", "variant": "emphasis" },
+    { "id": "e10", "from": "formInput", "to": "dbInsert", "label": "tanpa foto", "variant": "dashed", "role": "branch" },
+    { "id": "e11", "from": "dbInsert", "to": "resultTanggapan", "label": "moderasi & tanggapan", "variant": "default" },
+    { "id": "e12", "from": "resultTanggapan", "to": "dashboard", "label": "analitik", "variant": "dashed" },
+    { "id": "e13", "from": "adminReset", "to": "loginGate", "label": "reset ke toyota@1", "variant": "security", "role": "return" },
+    { "id": "e14", "from": "dbInsert", "to": "dashboard", "label": "ke analitik", "variant": "dashed" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Alur Utama",
+      "items": [
+        "Aktivasi cek MEMBERS Excel → INSERT member_accounts dengan SHA-256",
+        "Lupa password verifikasi Noreg + Nama (case-insensitive) → UPDATE password_hash",
+        "Admin reset via /members mengembalikan password ke toyota@1"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Data & Penyimpanan",
+      "items": [
+        "Form: tanggal, line, voice_text + foto compress → storage voice-photos",
+        "DB: voice_members simpan noreg, photo_url, comment TL/GL/Sect/Dept",
+        "RLS: member_accounts SELECT/INSERT/UPDATE anon, voice_members UPDATE publik"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Tindak Lanjut",
+      "items": [
+        "Result: filter per noreg untuk member, full untuk admin, export CSV",
+        "Dashboard: KPI, per line, per bulan, aging 0–7/8–14/15–30/>30 hari, Top Pengirim"
+      ]
+    }
+  ]
+}
